@@ -33,17 +33,22 @@ export async function POST(request: NextRequest) {
       completed: false,
     }))
 
-    // Store action plan in Supabase
+    // Store action plan in Supabase (upsert to update existing or create new)
     const { data: actionPlan, error: planError } = await supabase
       .from('action_plans')
-      .upsert({
-        user_id: user.id,
-        risk_score: result.riskScore,
-        factor: result.topFactor,
-        plan_message: result.nudgeMessage,
-        tasks,
-        updated_at: new Date().toISOString(),
-      })
+      .upsert(
+        {
+          user_id: user.id,
+          risk_score: result.riskScore,
+          factor: result.topFactor,
+          plan_message: result.nudgeMessage,
+          tasks,
+          updated_at: new Date().toISOString(),
+        } as any,
+        {
+          onConflict: 'user_id',
+        }
+      )
       .select()
       .single()
 

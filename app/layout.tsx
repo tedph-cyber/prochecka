@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "T2D Nudge Chatbot - Type 2 Diabetes Health Assistant",
+  title: "Prochecka Nudge Chatbot - Type 2 Diabetes Health Assistant",
   description: "AI-powered Type 2 Diabetes risk assessment and personalized health management platform",
 };
 

@@ -15,7 +15,7 @@ export async function updateSession(request: NextRequest) {
           return request.cookies.getAll()
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value))
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
           supabaseResponse = NextResponse.next({
             request,
           })
@@ -32,17 +32,34 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  // Protected routes
-  if (!user && !request.nextUrl.pathname.startsWith('/auth')) {
+  const pathname = request.nextUrl.pathname
+
+  // Allow guest access to dashboard and API routes
+  const guestAllowedPaths = [
+    '/',
+    '/dashboard',
+    '/api/chat',
+    '/api/predict',
+    '/api/action-plan',
+    '/api/guest',
+  ]
+
+  const isGuestAllowed = guestAllowedPaths.some((path) => pathname.startsWith(path))
+
+  // Redirect authenticated users away from auth pages
+  if (user && pathname.startsWith('/auth') && !pathname.startsWith('/auth/setup-username')) {
     const url = request.nextUrl.clone()
-    url.pathname = '/auth/sign-in'
+    url.pathname = '/dashboard'
     return NextResponse.redirect(url)
   }
 
-  // Redirect authenticated users away from auth pages
-  if (user && request.nextUrl.pathname.startsWith('/auth')) {
+  // Protected routes (require authentication)
+  const protectedPaths = ['/api/profile']
+  const isProtected = protectedPaths.some((path) => pathname.startsWith(path))
+
+  if (!user && isProtected) {
     const url = request.nextUrl.clone()
-    url.pathname = '/dashboard'
+    url.pathname = '/auth/sign-in'
     return NextResponse.redirect(url)
   }
 

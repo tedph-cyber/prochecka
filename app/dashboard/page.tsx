@@ -6,6 +6,15 @@ import { PIMA_FEATURES, PimaInput, validateInput } from '@/lib/risk-prediction'
 import { useRouter } from 'next/navigation'
 import ActionPlanSidebar from '@/components/ActionPlanSidebar'
 import EmergencyButton from '@/components/EmergencyButton'
+import GuestSignInPrompt from '@/components/GuestSignInPrompt'
+import ProfileDropdown from '@/components/ProfileDropdown'
+import { 
+  createOrGetGuestSession, 
+  getGuestData, 
+  setGuestData, 
+  isGuestMode,
+  GuestAssessmentData 
+} from '@/lib/guest-session'
 
 interface Message {
   id: string
@@ -17,6 +26,8 @@ interface Message {
 
 export default function DashboardPage() {
   const [user, setUser] = useState<any>(null)
+  const [isGuest, setIsGuest] = useState(false)
+  const [showGuestPrompt, setShowGuestPrompt] = useState(false)
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
@@ -29,9 +40,8 @@ export default function DashboardPage() {
   const supabase = createClient()
 
   useEffect(() => {
-    checkUser()
-    loadChatHistory()
-    loadActionPlan()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    initializeSession()
   }, [])
 
   useEffect(() => {
@@ -42,15 +52,60 @@ export default function DashboardPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }
 
-  const checkUser = async () => {
+  const initializeSession = async () => {
     const {
       data: { user },
     } = await supabase.auth.getUser()
-    if (!user) {
-      router.push('/auth/sign-in')
-    } else {
+    
+    if (user) {
+      // Authenticated user
       setUser(user)
+      setIsGuest(false)
+      loadChatHistory()
+      loadActionPlan()
+    } else {
+      // Guest mode
+      setIsGuest(true)
+      await createOrGetGuestSession()
+      loadGuestData()
     }
+  }
+
+  const loadGuestData = () => {
+    const guestData = getGuestData()
+    if (guestData) {
+      setMessages(guestData.messages || [])
+      setUserInputs(guestData.inputs || {})
+      
+      if (guestData.result) {
+        setPredictionComplete(true)
+        setActionPlan(guestData.result)
+        setShowGuestPrompt(true)
+      }
+      
+      // Determine current question
+      const userMessages = guestData.messages?.filter((m: Message) => m.role === 'user') || []
+      setCurrentQuestion(userMessages.length)
+    } else {
+      // Start new conversation for guest
+      askFirstQuestion()
+    }
+  }
+
+  const saveGuestData = (data: Partial<GuestAssessmentData>) => {
+    const existingData = getGuestData() || {
+      messages: [],
+      inputs: {},
+      timestamp: new Date().toISOString()
+    }
+    
+    const updatedData = {
+      ...existingData,
+      ...data,
+      timestamp: new Date().toISOString()
+    }
+    
+    setGuestData(updatedData)
   }
 
   const loadChatHistory = async () => {
@@ -112,6 +167,11 @@ export default function DashboardPage() {
     text: string
     is_final?: boolean
   }) => {
+    if (isGuest) {
+      // For guests, save to local storage only
+      return
+    }
+    
     try {
       await fetch('/api/chat', {
         method: 'POST',
@@ -146,15 +206,21 @@ export default function DashboardPage() {
     }
 
     await saveMessage(userMessage)
-    setMessages((prev) => [
-      ...prev,
+    const newMessages = [
+      ...messages,
       { ...userMessage, id: Date.now().toString(), timestamp: new Date().toISOString() },
-    ])
+    ]
+    setMessages(newMessages)
 
     // Update user inputs
     const featureName = PIMA_FEATURES[currentQuestion].name as keyof PimaInput
     const updatedInputs = { ...userInputs, [featureName]: value }
     setUserInputs(updatedInputs)
+
+    // Save to guest storage if needed
+    if (isGuest) {
+      saveGuestData({ messages: newMessages, inputs: updatedInputs })
+    }
 
     setInput('')
 
@@ -170,10 +236,16 @@ export default function DashboardPage() {
 
       setTimeout(async () => {
         await saveMessage(botMessage)
-        setMessages((prev) => [
-          ...prev,
+        const updatedMessages = [
+          ...newMessages,
           { ...botMessage, id: Date.now().toString(), timestamp: new Date().toISOString() },
-        ])
+        ]
+        setMessages(updatedMessages)
+        
+        if (isGuest) {
+          saveGuestData({ messages: updatedMessages, inputs: updatedInputs })
+        }
+        
         setCurrentQuestion((prev) => prev + 1)
         setLoading(false)
       }, 500)
@@ -190,28 +262,43 @@ export default function DashboardPage() {
           const data = await response.json()
 
           if (data.success) {
-            const finalMessage = {
-              role: 'assistant' as const,
-              text: `🎯 **Risk Assessment Complete!**\n\n**Your Prochecka Risk Score: ${data.result.riskScore}/100**\n\n**Primary Factor: ${data.result.topFactor}**\n\n${data.result.nudgeMessage}\n\n✨ I've created a personalized daily routine for you! Check the Action Plan sidebar on the right to see your tasks and start tracking your progress.`,
-              is_final: true,
-            }
-
-            await saveMessage(finalMessage)
-            setMessages((prev) => [
-              ...prev,
-              {
-                ...finalMessage,
-                id: Date.now().toString(),
-                timestamp: new Date().toISOString(),
-              },
-            ])
-            setPredictionComplete(true)
-            setActionPlan({
+            const planData = {
               risk_score: data.result.riskScore,
               factor: data.result.topFactor,
               plan_message: data.result.nudgeMessage,
               tasks: data.result.tasks,
-            })
+            }
+            setActionPlan(planData)
+            
+            // For guests, save to local storage and show sign-in prompt BEFORE showing results
+            if (isGuest) {
+              saveGuestData({ 
+                messages: newMessages, 
+                inputs: updatedInputs, 
+                result: planData 
+              })
+              setShowGuestPrompt(true)
+              setPredictionComplete(true)
+            } else {
+              // For authenticated users, show results immediately
+              const finalMessage = {
+                role: 'assistant' as const,
+                text: `🎯 **Risk Assessment Complete!**\n\n**Your Prochecka Risk Score: ${data.result.riskScore}/100**\n\n**Primary Factor: ${data.result.topFactor}**\n\n${data.result.nudgeMessage}\n\n✨ I've created a personalized daily routine for you! Check the Action Plan sidebar on the right to see your tasks and start tracking your progress.`,
+                is_final: true,
+              }
+
+              await saveMessage(finalMessage)
+              const updatedMessages = [
+                ...newMessages,
+                {
+                  ...finalMessage,
+                  id: Date.now().toString(),
+                  timestamp: new Date().toISOString(),
+                },
+              ]
+              setMessages(updatedMessages)
+              setPredictionComplete(true)
+            }
           }
         } catch (error) {
           console.error('Prediction error:', error)
@@ -245,11 +332,20 @@ export default function DashboardPage() {
       return
     }
 
-    await fetch('/api/chat', { method: 'DELETE' })
+    if (!isGuest) {
+      await fetch('/api/chat', { method: 'DELETE' })
+    }
+    
     setMessages([])
     setCurrentQuestion(0)
     setUserInputs({})
     setPredictionComplete(false)
+    setShowGuestPrompt(false)
+    
+    if (isGuest) {
+      saveGuestData({ messages: [], inputs: {}, result: undefined })
+    }
+    
     askFirstQuestion()
   }
 
@@ -258,53 +354,64 @@ export default function DashboardPage() {
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col">
         {/* Header */}
-        <header className="bg-white border-b border-gray-200 px-6 py-4">
+        <header className="bg-white border-b border-gray-200 px-4 md:px-6 py-3 md:py-4">
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Prochecka Health Assistant</h1>
-              <p className="text-sm text-gray-600 mt-1">
-                {user && (
-                  <>
+            <div className="flex-1 min-w-0">
+              <h1 className="text-lg md:text-2xl font-bold text-gray-900 truncate">Prochecka Health Assistant</h1>
+              <p className="text-xs md:text-sm text-gray-600 mt-1">
+                {isGuest ? (
+                  <span className="inline-flex items-center gap-2">
+                    <span className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></span>
+                    <span className="hidden sm:inline">Guest Mode - Sign up to save your results</span>
+                    <span className="sm:hidden">Guest Mode</span>
+                  </span>
+                ) : user ? (
+                  <span className="hidden md:inline">
                     User ID: <span className="font-mono text-xs">{user.id}</span>
-                  </>
-                )}
+                  </span>
+                ) : null}
               </p>
             </div>
-            <div className="flex gap-3">
+            <div className="flex items-center gap-2 md:gap-3">
               {messages.length > 0 && (
                 <button
                   onClick={handleResetChat}
-                  className="px-4 py-2 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                  className="px-3 md:px-4 py-2 text-xs md:text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors whitespace-nowrap"
                 >
-                  New Assessment
+                  <span className="hidden sm:inline">New Assessment</span>
+                  <span className="sm:hidden">New</span>
                 </button>
               )}
-              <button
-                onClick={handleSignOut}
-                className="px-4 py-2 text-sm bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
-              >
-                Sign Out
-              </button>
+              {isGuest ? (
+                <a
+                  href="/auth/sign-up"
+                  className="px-3 md:px-4 py-2 text-xs md:text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors whitespace-nowrap"
+                >
+                  Sign Up
+                </a>
+              ) : (
+                <ProfileDropdown user={user} onSignOut={handleSignOut} />
+              )}
             </div>
           </div>
         </header>
 
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto px-6 py-8">
-          <div className="max-w-3xl mx-auto space-y-6">
+        <div className="flex-1 overflow-y-auto px-3 md:px-6 py-4 md:py-8">
+          <div className="max-w-3xl mx-auto space-y-4 md:space-y-6">
             {messages.map((message) => (
               <div
                 key={message.id}
                 className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
               >
                 <div
-                  className={`max-w-[80%] rounded-2xl px-6 py-4 ${
+                  className={`max-w-[85%] md:max-w-[80%] rounded-2xl px-4 md:px-6 py-3 md:py-4 ${
                     message.role === 'user'
                       ? 'bg-indigo-600 text-white'
                       : 'bg-white text-gray-900 shadow-sm border border-gray-200'
                   }`}
                 >
-                  <div className="whitespace-pre-wrap">{message.text}</div>
+                  <div className="whitespace-pre-wrap text-sm md:text-base">{message.text}</div>
                   <div
                     className={`text-xs mt-2 ${
                       message.role === 'user' ? 'text-indigo-200' : 'text-gray-500'
@@ -317,11 +424,11 @@ export default function DashboardPage() {
             ))}
             {loading && (
               <div className="flex justify-start">
-                <div className="bg-white rounded-2xl px-6 py-4 shadow-sm border border-gray-200">
+                <div className="bg-white rounded-2xl px-4 md:px-6 py-3 md:py-4 shadow-sm border border-gray-200">
                   <div className="flex space-x-2">
                     <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-100"></div>
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-200"></div>
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
                   </div>
                 </div>
               </div>
@@ -331,9 +438,9 @@ export default function DashboardPage() {
         </div>
 
         {/* Input Area */}
-        <div className="border-t border-gray-200 bg-white px-6 py-4">
+        <div className="border-t border-gray-200 bg-white px-3 md:px-6 py-3 md:py-4">
           <form onSubmit={handleSubmit} className="max-w-3xl mx-auto">
-            <div className="flex gap-3">
+            <div className="flex gap-2 md:gap-3">
               <input
                 type="text"
                 value={input}
@@ -341,21 +448,21 @@ export default function DashboardPage() {
                 disabled={loading || predictionComplete}
                 placeholder={
                   predictionComplete
-                    ? 'Assessment complete! Start a new assessment to continue.'
+                    ? 'Assessment complete!'
                     : 'Type your answer...'
                 }
-                className="flex-1 px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none disabled:bg-gray-100 disabled:cursor-not-allowed"
+                className="flex-1 px-3 md:px-4 py-2 md:py-3 text-sm md:text-base border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none disabled:bg-gray-100 disabled:cursor-not-allowed"
               />
               <button
                 type="submit"
                 disabled={loading || predictionComplete || !input.trim()}
-                className="px-6 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-colors"
+                className="px-4 md:px-6 py-2 md:py-3 text-sm md:text-base bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium transition-colors whitespace-nowrap"
               >
                 Send
               </button>
             </div>
             {currentQuestion < PIMA_FEATURES.length && !predictionComplete && (
-              <div className="mt-3 text-sm text-gray-600">
+              <div className="mt-2 md:mt-3 text-xs md:text-sm text-gray-600">
                 Question {currentQuestion + 1} of {PIMA_FEATURES.length} •{' '}
                 {PIMA_FEATURES[currentQuestion].name}
               </div>
@@ -369,6 +476,14 @@ export default function DashboardPage() {
 
       {/* Emergency Button */}
       <EmergencyButton />
+
+      {/* Guest Sign-In Prompt */}
+      {showGuestPrompt && actionPlan && (
+        <GuestSignInPrompt 
+          riskScore={actionPlan.risk_score} 
+          onClose={() => setShowGuestPrompt(false)}
+        />
+      )}
     </div>
   )
 }

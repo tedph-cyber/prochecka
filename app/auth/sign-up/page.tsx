@@ -48,19 +48,6 @@ export default function SignUpPage() {
     }
   }
 
-  const handleGitHubSignUp = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'github',
-      options: {
-        redirectTo: `${location.origin}/auth/callback`,
-      },
-    })
-
-    if (error) {
-      throw new Error(error.message)
-    }
-  }
-
   return (
     <AuthComponent 
       mode="signup"
@@ -68,7 +55,6 @@ export default function SignUpPage() {
       brandName="Prochecka"
       onSubmit={handleSignUp}
       onGoogleAuth={handleGoogleSignUp}
-      onGitHubAuth={handleGitHubSignUp}
     />
   )
 }

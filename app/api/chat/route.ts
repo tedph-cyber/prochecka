@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
         text,
         is_final,
         timestamp: new Date().toISOString(),
-      })
+      } as any)
       .select()
       .single()
 

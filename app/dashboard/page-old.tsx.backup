@@ -1,0 +1,608 @@
+'use client'
+
+import { useEffect, useState, useRef } from 'react'
+import { createClient } from '@/lib/supabase/client'
+import { PIMA_FEATURES, PimaInput, validateInput } from '@/lib/risk-prediction'
+import { useRouter } from 'next/navigation'
+import EmergencyButton from '@/components/EmergencyButton'
+import GuestSignInPrompt from '@/components/GuestSignInPrompt'
+import { Header } from '@/components/ui/header'
+import { 
+  createOrGetGuestSession, 
+  getGuestData, 
+  setGuestData, 
+  isGuestMode,
+  GuestAssessmentData 
+} from '@/lib/guest-session'
+import {
+  ChatInput,
+  ChatInputSubmit,
+  ChatInputTextArea,
+} from "@/components/ui/chat-input";
+import { toast } from "sonner";
+
+
+// Gradient background component (same as home/auth pages)
+const GradientBackground = () => (
+  <>
+    <style>
+      {`@keyframes float1 { 0% { transform: translate(0, 0); } 50% { transform: translate(-10px, 10px); } 100% { transform: translate(0, 0); } } @keyframes float2 { 0% { transform: translate(0, 0); } 50% { transform: translate(10px, -10px); } 100% { transform: translate(0, 0); } }`}
+    </style>
+    <svg width="100%" height="100%" viewBox="0 0 800 600" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice" className="absolute top-0 left-0 w-full h-full">
+      <defs>
+        <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style={{stopColor: 'var(--color-primary)', stopOpacity:0.8}} /><stop offset="100%" style={{stopColor: 'var(--color-chart-3)', stopOpacity:0.6}} /></linearGradient>
+        <linearGradient id="grad2" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style={{stopColor: 'var(--color-chart-4)', stopOpacity:0.9}} /><stop offset="50%" style={{stopColor: 'var(--color-secondary)', stopOpacity:0.7}} /><stop offset="100%" style={{stopColor: 'var(--color-chart-1)', stopOpacity:0.6}} /></linearGradient>
+        <radialGradient id="grad3" cx="50%" cy="50%" r="50%"><stop offset="0%" style={{stopColor: 'var(--color-destructive)', stopOpacity:0.8}} /><stop offset="100%" style={{stopColor: 'var(--color-chart-5)', stopOpacity:0.4}} /></radialGradient>
+        <filter id="blur1" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="35"/></filter>
+        <filter id="blur2" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="25"/></filter>
+        <filter id="blur3" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="45"/></filter>
+      </defs>
+      <g style={{ animation: 'float1 20s ease-in-out infinite' }}>
+        <ellipse cx="200" cy="500" rx="250" ry="180" fill="url(#grad1)" filter="url(#blur1)" transform="rotate(-30 200 500)"/>
+        <rect x="500" y="100" width="300" height="250" rx="80" fill="url(#grad2)" filter="url(#blur2)" transform="rotate(15 650 225)"/>
+      </g>
+      <g style={{ animation: 'float2 25s ease-in-out infinite' }}>
+        <circle cx="650" cy="450" r="150" fill="url(#grad3)" filter="url(#blur3)" opacity="0.7"/>
+        <ellipse cx="50" cy="150" rx="180" ry="120" fill="var(--color-accent)" filter="url(#blur2)" opacity="0.8"/>
+      </g>
+    </svg>
+  </>
+)
+
+interface Message {
+  id: string
+  role: 'user' | 'assistant'
+  text: string
+  timestamp: string
+  is_final?: boolean
+}
+
+export default function DashboardPage() {
+  const [user, setUser] = useState<any>(null)
+  const [isGuest, setIsGuest] = useState(false)
+  const [showGuestPrompt, setShowGuestPrompt] = useState(false)
+  const [showActionPlan, setShowActionPlan] = useState(false)
+  const [messages, setMessages] = useState<Message[]>([])
+  const [input, setInput] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [currentQuestion, setCurrentQuestion] = useState(0)
+  const [userInputs, setUserInputs] = useState<Partial<PimaInput>>({})
+  const [predictionComplete, setPredictionComplete] = useState(false)
+  const [actionPlan, setActionPlan] = useState<any>(null)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+  const router = useRouter()
+  const supabase = createClient()
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    initializeSession()
+  }, [])
+
+  useEffect(() => {
+    scrollToBottom()
+  }, [messages])
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }
+
+  const initializeSession = async () => {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    
+    if (user) {
+      // Authenticated user
+      setUser(user)
+      setIsGuest(false)
+      loadChatHistory()
+      loadActionPlan()
+    } else {
+      // Guest mode
+      setIsGuest(true)
+      await createOrGetGuestSession()
+      loadGuestData()
+    }
+  }
+
+  const loadGuestData = () => {
+    const guestData = getGuestData()
+    if (guestData) {
+      setMessages(guestData.messages || [])
+      setUserInputs(guestData.inputs || {})
+      
+      if (guestData.result) {
+        setPredictionComplete(true)
+        setActionPlan(guestData.result)
+        setShowGuestPrompt(true)
+      }
+      
+      // Determine current question
+      const userMessages = guestData.messages?.filter((m: Message) => m.role === 'user') || []
+      setCurrentQuestion(userMessages.length)
+    } else {
+      // Start new conversation for guest
+      askFirstQuestion()
+    }
+  }
+
+  const saveGuestData = (data: Partial<GuestAssessmentData>) => {
+    const existingData = getGuestData() || {
+      messages: [],
+      inputs: {},
+      timestamp: new Date().toISOString()
+    }
+    
+    const updatedData = {
+      ...existingData,
+      ...data,
+      timestamp: new Date().toISOString()
+    }
+    
+    setGuestData(updatedData)
+  }
+
+  const loadChatHistory = async () => {
+    const response = await fetch('/api/chat')
+    const data = await response.json()
+
+    if (data.messages && data.messages.length > 0) {
+      setMessages(data.messages)
+      // Determine current question based on user responses
+      const userMessages = data.messages.filter((m: Message) => m.role === 'user')
+      setCurrentQuestion(userMessages.length)
+
+      // Reconstruct user inputs
+      const inputs: Partial<PimaInput> = {}
+      userMessages.forEach((msg: Message, idx: number) => {
+        if (idx < PIMA_FEATURES.length) {
+          const featureName = PIMA_FEATURES[idx].name as keyof PimaInput
+          inputs[featureName] = parseFloat(msg.text)
+        }
+      })
+      setUserInputs(inputs)
+
+      // Check if prediction is complete
+      const finalMessage = data.messages.find((m: Message) => m.is_final)
+      if (finalMessage) {
+        setPredictionComplete(true)
+      }
+    } else {
+      // Start new conversation
+      askFirstQuestion()
+    }
+  }
+
+  const loadActionPlan = async () => {
+    const response = await fetch('/api/action-plan')
+    const data = await response.json()
+    if (data.plan) {
+      setActionPlan(data.plan)
+    }
+  }
+
+  const askFirstQuestion = async () => {
+    const firstQuestion = PIMA_FEATURES[0].question
+    const botMessage = {
+      role: 'assistant' as const,
+      text: `Hello! I'm your Prochecka Health Assistant. I'll ask you 8 questions to assess your diabetes risk and create a personalized action plan. Let's begin:\n\n${firstQuestion}`,
+      is_final: false,
+    }
+
+    await saveMessage(botMessage)
+    setMessages((prev) => [
+      ...prev,
+      { ...botMessage, id: Date.now().toString(), timestamp: new Date().toISOString() },
+    ])
+  }
+
+  const saveMessage = async (message: {
+    role: 'user' | 'assistant'
+    text: string
+    is_final?: boolean
+  }) => {
+    if (isGuest) {
+      // For guests, save to local storage only
+      return
+    }
+    
+    try {
+      await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(message),
+      })
+    } catch (error) {
+      console.error('Error saving message:', error)
+    }
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!input.trim() || loading || predictionComplete) return
+
+    const value = parseFloat(input.trim())
+
+    // Validate input
+    if (isNaN(value) || !validateInput(currentQuestion, value)) {
+      const feature = PIMA_FEATURES[currentQuestion]
+      toast.error(`Please enter a valid number between ${feature.min} and ${feature.max}`)
+      return
+    }
+
+    setLoading(true)
+
+    // Save user message
+    const userMessage = {
+      role: 'user' as const,
+      text: input.trim(),
+      is_final: false,
+    }
+
+    await saveMessage(userMessage)
+    const newMessages = [
+      ...messages,
+      { ...userMessage, id: Date.now().toString(), timestamp: new Date().toISOString() },
+    ]
+    setMessages(newMessages)
+
+    // Update user inputs
+    const featureName = PIMA_FEATURES[currentQuestion].name as keyof PimaInput
+    const updatedInputs = { ...userInputs, [featureName]: value }
+    setUserInputs(updatedInputs)
+
+    // Save to guest storage if needed
+    if (isGuest) {
+      saveGuestData({ messages: newMessages, inputs: updatedInputs })
+    }
+
+    setInput('')
+
+    // Check if we need to ask next question or run prediction
+    if (currentQuestion < PIMA_FEATURES.length - 1) {
+      // Ask next question
+      const nextQuestion = PIMA_FEATURES[currentQuestion + 1].question
+      const botMessage = {
+        role: 'assistant' as const,
+        text: nextQuestion,
+        is_final: false,
+      }
+
+      setTimeout(async () => {
+        await saveMessage(botMessage)
+        const updatedMessages = [
+          ...newMessages,
+          { ...botMessage, id: Date.now().toString(), timestamp: new Date().toISOString() },
+        ]
+        setMessages(updatedMessages)
+        
+        if (isGuest) {
+          saveGuestData({ messages: updatedMessages, inputs: updatedInputs })
+        }
+        
+        setCurrentQuestion((prev) => prev + 1)
+        setLoading(false)
+      }, 500)
+    } else {
+      // All questions answered, run prediction
+      setTimeout(async () => {
+        try {
+          const response = await fetch('/api/predict', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ inputs: updatedInputs }),
+          })
+
+          const data = await response.json()
+
+          if (data.success) {
+            const planData = {
+              risk_score: data.result.riskScore,
+              factor: data.result.topFactor,
+              plan_message: data.result.nudgeMessage,
+              tasks: data.result.tasks,
+            }
+            setActionPlan(planData)
+            
+            // For guests, save to local storage and show sign-in prompt BEFORE showing results
+            if (isGuest) {
+              saveGuestData({ 
+                messages: newMessages, 
+                inputs: updatedInputs, 
+                result: planData 
+              })
+              setShowGuestPrompt(true)
+              setPredictionComplete(true)
+            } else {
+              // For authenticated users, show results immediately
+              const finalMessage = {
+                role: 'assistant' as const,
+                text: `🎯 **Risk Assessment Complete!**\n\n**Your Prochecka Risk Score: ${data.result.riskScore}/100**\n\n**Primary Factor: ${data.result.topFactor}**\n\n${data.result.nudgeMessage}\n\n✨ I've created a personalized daily routine for you! Check the Action Plan sidebar on the right to see your tasks and start tracking your progress.`,
+                is_final: true,
+              }
+
+              await saveMessage(finalMessage)
+              const updatedMessages = [
+                ...newMessages,
+                {
+                  ...finalMessage,
+                  id: Date.now().toString(),
+                  timestamp: new Date().toISOString(),
+                },
+              ]
+              setMessages(updatedMessages)
+              setPredictionComplete(true)
+            }
+          }
+        } catch (error) {
+          console.error('Prediction error:', error)
+          const errorMessage = {
+            role: 'assistant' as const,
+            text: 'Sorry, there was an error processing your assessment. Please try again.',
+            is_final: false,
+          }
+          await saveMessage(errorMessage)
+          setMessages((prev) => [
+            ...prev,
+            {
+              ...errorMessage,
+              id: Date.now().toString(),
+              timestamp: new Date().toISOString(),
+            },
+          ])
+        }
+        setLoading(false)
+      }, 1000)
+    }
+  }
+
+  const handleChatSubmit = () => {
+    handleSubmit({ preventDefault: () => {} } as React.FormEvent)
+  }
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut()
+    router.push('/auth/sign-in')
+  }
+
+  const handleResetChat = async () => {
+    if (!confirm('Are you sure you want to start a new assessment? This will clear your chat history.')) {
+      return
+    }
+
+    if (!isGuest) {
+      await fetch('/api/chat', { method: 'DELETE' })
+    }
+    
+    setMessages([])
+    setCurrentQuestion(0)
+    setUserInputs({})
+    setPredictionComplete(false)
+    setShowGuestPrompt(false)
+    
+    if (isGuest) {
+      saveGuestData({ messages: [], inputs: {}, result: undefined })
+    }
+    
+    askFirstQuestion()
+  }
+
+  return (
+    <div className="relative flex flex-col lg:flex-row h-screen overflow-hidden bg-background">
+      {/* Gradient Background */}
+      <div className="fixed inset-0 z-0">
+        <GradientBackground />
+      </div>
+
+      {/* Main Chat Area */}
+      <div className="relative z-10 flex-1 flex flex-col min-h-0">
+        {/* Header */}
+        <Header
+          user={user}
+          isGuest={isGuest}
+          actionPlan={actionPlan}
+          messagesLength={messages.length}
+          onSignOut={handleSignOut}
+          onResetChat={handleResetChat}
+          onViewPlan={() => setShowActionPlan(true)}
+        />
+
+        {/* Messages */}
+        <div className="flex-1 overflow-y-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8 pb-28 sm:pb-32 md:pb-36 min-h-0">
+          <div className="max-w-4xl mx-auto space-y-4 sm:space-y-5 md:space-y-6">
+            {messages.map((message) => (
+              <div
+                key={message.id}
+                className={`flex ${
+                  message.role === "user" ? "justify-end" : "justify-start"
+                }`}
+              >
+                <div
+                  className={`max-w-[85%] sm:max-w-[80%] md:max-w-[75%] rounded-2xl sm:rounded-3xl px-4 sm:px-5 md:px-7 py-3 sm:py-4 md:py-5 ${
+                    message.role === "user"
+                      ? "bg-primary/90 text-primary-foreground backdrop-blur-sm shadow-xl"
+                      : "backdrop-blur-md bg-card/60 text-card-foreground shadow-lg border border-border/50"
+                  }`}
+                >
+                  <div className="whitespace-pre-wrap text-sm sm:text-base md:text-lg leading-relaxed">
+                    {message.text}
+                  </div>
+                  <div
+                    className={`text-xs sm:text-sm mt-2 sm:mt-2.5 opacity-70`}
+                  >
+                    {new Date(message.timestamp).toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </div>
+                </div>
+              </div>
+            ))}
+            {loading && (
+              <div className="flex justify-start">
+                <div className="backdrop-blur-md bg-card/60 rounded-2xl sm:rounded-3xl px-4 sm:px-5 md:px-7 py-3 sm:py-4 md:py-5 shadow-lg border border-border/50">
+                  <div className="flex space-x-2 sm:space-x-2.5">
+                    <div className="w-2 h-2 sm:w-2.5 sm:h-2.5 bg-primary/60 rounded-full animate-bounce"></div>
+                    <div
+                      className="w-2 h-2 sm:w-2.5 sm:h-2.5 bg-primary/60 rounded-full animate-bounce"
+                      style={{ animationDelay: "0.1s" }}
+                    ></div>
+                    <div
+                      className="w-2 h-2 sm:w-2.5 sm:h-2.5 bg-primary/60 rounded-full animate-bounce"
+                      style={{ animationDelay: "0.2s" }}
+                    ></div>
+                  </div>
+                </div>
+              </div>
+            )}
+            <div ref={messagesEndRef} />
+          </div>
+        </div>
+
+        {/* Input Area - Floating */}
+        <div className="fixed bottom-4 sm:bottom-6 left-0 right-0 px-4 sm:px-6 md:px-8 pointer-events-none z-20">
+          <div className="max-w-4xl mx-auto pointer-events-auto">
+            {currentQuestion < PIMA_FEATURES.length && !predictionComplete && (
+              <div className="mb-3 text-xs sm:text-sm md:text-base text-muted-foreground backdrop-blur-md bg-card/60 rounded-xl py-2 px-4 shadow-lg border border-border/50 inline-block">
+                Question {currentQuestion + 1} of {PIMA_FEATURES.length} •{" "}
+                {PIMA_FEATURES[currentQuestion].name}
+              </div>
+            )}
+            <div className="w-full backdrop-blur-md bg-card/70 rounded-2xl shadow-2xl border border-border/50">
+              <ChatInput
+                variant="default"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onSubmit={handleChatSubmit}
+                loading={loading}
+                onStop={() => setLoading(false)}
+              >
+                <ChatInputTextArea />
+                <ChatInputSubmit />
+              </ChatInput>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Action Plan Modal */}
+      {showActionPlan && actionPlan && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-md">
+          <div className="backdrop-blur-xl bg-card/90 border border-border/50 w-full sm:w-[90%] sm:max-w-3xl sm:rounded-t-3xl rounded-t-3xl sm:rounded-b-3xl max-h-[85vh] sm:max-h-[80vh] flex flex-col shadow-2xl animate-in slide-in-from-bottom sm:zoom-in-95 duration-300">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-5 sm:px-7 py-5 sm:py-6 border-b border-border/50 shrink-0">
+              <div>
+                <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground">
+                  Your Action Plan
+                </h2>
+                <p className="text-sm sm:text-base text-muted-foreground mt-1.5">
+                  Risk Score:{" "}
+                  <span className="font-semibold text-primary">
+                    {actionPlan.risk_score}/100
+                  </span>
+                </p>
+              </div>
+              <button
+                onClick={() => setShowActionPlan(false)}
+                className="p-2 hover:bg-accent rounded-lg transition-colors"
+              >
+                <svg
+                  className="w-5 h-5 sm:w-6 sm:h-6 text-gray-500"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="flex-1 overflow-y-auto px-5 sm:px-7 py-5 sm:py-6">
+              <div className="space-y-5 sm:space-y-6">
+                {/* Risk Message */}
+                <div className="backdrop-blur-sm bg-primary/10 border border-primary/30 rounded-2xl p-4 sm:p-5">
+                  <p className="text-sm sm:text-base md:text-lg text-foreground leading-relaxed">
+                    {actionPlan.plan_message}
+                  </p>
+                </div>
+
+                {/* Primary Factor */}
+                <div>
+                  <h3 className="text-base sm:text-lg md:text-xl font-semibold text-foreground mb-3">
+                    Primary Factor
+                  </h3>
+                  <div className="backdrop-blur-sm bg-destructive/10 border border-destructive/30 rounded-xl px-4 sm:px-5 py-3 sm:py-4">
+                    <p className="text-sm sm:text-base md:text-lg text-foreground font-medium">
+                      {actionPlan.factor}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Daily Tasks */}
+                {actionPlan.tasks && actionPlan.tasks.length > 0 && (
+                  <div>
+                    <h3 className="text-base sm:text-lg md:text-xl font-semibold text-foreground mb-4">
+                      Daily Tasks
+                    </h3>
+                    <div className="space-y-3 sm:space-y-4">
+                      {actionPlan.tasks.map((task: any, index: number) => (
+                        <div
+                          key={index}
+                          className="backdrop-blur-sm bg-card/40 border border-border/50 rounded-xl p-4 sm:p-5 hover:bg-card/60 hover:border-primary/50 transition-all"
+                        >
+                          <div className="flex items-start gap-3 sm:gap-4">
+                            <div className="shrink-0 w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-primary/20 flex items-center justify-center mt-0.5">
+                              <span className="text-sm sm:text-base font-bold text-primary">
+                                {index + 1}
+                              </span>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm sm:text-base md:text-lg text-foreground font-medium leading-relaxed">
+                                {task.task}
+                              </p>
+                              <p className="text-xs sm:text-sm text-muted-foreground mt-2">
+                                Due:{" "}
+                                {new Date(task.due_date).toLocaleDateString()}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="shrink-0 px-5 sm:px-7 py-4 sm:py-5 border-t border-border/50 backdrop-blur-sm bg-card/40">
+              <button
+                onClick={() => setShowActionPlan(false)}
+                className="w-full px-4 py-3 sm:py-3.5 bg-primary text-primary-foreground text-base sm:text-lg rounded-xl hover:bg-primary/90 transition-all shadow-lg font-medium"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Emergency Button */}
+      {/* <EmergencyButton /> */}
+
+      {/* Guest Sign-In Prompt */}
+      {showGuestPrompt && actionPlan && (
+        <GuestSignInPrompt
+          riskScore={actionPlan.risk_score}
+          onClose={() => setShowGuestPrompt(false)}
+        />
+      )}
+    </div>
+  );
+}

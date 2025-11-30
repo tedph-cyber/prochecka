@@ -25,14 +25,16 @@ export async function POST(request: NextRequest) {
 
     // Create new guest session
     const newToken = uuidv4()
-    const { data: session, error } = await supabase
-      .from('guest_sessions')
+    const result: any = await (supabase
+      .from('guest_sessions') as any)
       .insert({
         session_token: newToken,
         assessment_data: {},
       })
       .select()
       .single()
+    
+    const { data: session, error } = result
 
     if (error) {
       console.error('Error creating guest session:', error)
@@ -57,8 +59,8 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'Session token required' }, { status: 400 })
     }
 
-    const { data: session, error } = await supabase
-      .from('guest_sessions')
+    const result: any = await (supabase
+      .from('guest_sessions') as any)
       .update({
         assessment_data,
         risk_score,
@@ -66,6 +68,8 @@ export async function PATCH(request: NextRequest) {
       .eq('session_token', session_token)
       .select()
       .single()
+    
+    const { data: session, error } = result
 
     if (error) {
       console.error('Error updating guest session:', error)
@@ -101,21 +105,23 @@ export async function PUT(request: NextRequest) {
     }
 
     // Get guest session
-    const { data: guestSession, error: fetchError } = await supabase
+    const result: any = await supabase
       .from('guest_sessions')
       .select('*')
       .eq('session_token', session_token)
       .single()
+    
+    const { data: guestSession, error: fetchError } = result
 
     if (fetchError || !guestSession) {
       return NextResponse.json({ error: 'Guest session not found' }, { status: 404 })
     }
 
     // Mark session as converted
-    await supabase
-      .from('guest_sessions')
+    await ((supabase
+      .from('guest_sessions') as any)
       .update({ converted_to_user_id: user.id })
-      .eq('session_token', session_token)
+      .eq('session_token', session_token))
 
     // If there's assessment data, create action plan for user
     if (guestSession.assessment_data && guestSession.risk_score) {
@@ -130,13 +136,13 @@ export async function PUT(request: NextRequest) {
 
       if (!existingPlan && assessmentData.result) {
         // Create action plan from guest data
-        await (supabase.from('action_plans').insert as any)({
+        await ((supabase.from('action_plans') as any).insert({
           user_id: user.id,
           risk_score: assessmentData.result.riskScore,
           factor: assessmentData.result.topFactor,
           plan_message: assessmentData.result.nudgeMessage,
           tasks: assessmentData.result.tasks || [],
-        })
+        }))
       }
 
       // Transfer chat history if exists
@@ -149,7 +155,7 @@ export async function PUT(request: NextRequest) {
           is_final: msg.is_final || false,
         }))
 
-        await supabase.from('chat_history').insert(chatMessages)
+        await ((supabase.from('chat_history') as any).insert(chatMessages))
       }
     }
 

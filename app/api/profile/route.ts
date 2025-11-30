@@ -133,16 +133,18 @@ export async function PATCH(request: NextRequest) {
     }
 
     // Update existing profile
-    const { data: profile, error } = await supabase
-      .from('user_profiles')
+    const result: any = await (supabase
+      .from('user_profiles') as any)
       .update({
         username,
         display_name,
         updated_at: new Date().toISOString(),
-      } as any)
+      })
       .eq('id', user.id)
       .select()
       .single()
+    
+    const { data: profile, error } = result
 
     if (error) {
       if (error.code === '23505') {

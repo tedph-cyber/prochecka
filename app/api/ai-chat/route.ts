@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { chatWithAI } from "@/lib/ai-service";
-import { calculateRiskAndNudge } from "@/lib/risk-prediction";
+import { chatWithAI } from "@/lib/ai-services";
 
 export async function POST(request: NextRequest) {
   try {
@@ -11,9 +10,9 @@ export async function POST(request: NextRequest) {
     } = await supabase.auth.getUser();
 
     const body = await request.json();
-    const { message, conversation_history, collected_metrics } = body;
+    const { message, conversation_history } = body;
 
-    // Add user message to history
+    // Build message history
     const messages = [
       ...conversation_history,
       { role: "user", content: message },
@@ -22,54 +21,29 @@ export async function POST(request: NextRequest) {
     // Get AI response
     const aiResponse = await chatWithAI(messages, user?.id);
 
-    // Handle function calls
-    if (aiResponse.type === "function_call") {
-      switch (aiResponse.function) {
-        case "start_assessment":
-          return NextResponse.json({
-            message:
-              aiResponse.message ||
-              "Great! Let's begin your health assessment.",
-            action: "start_assessment",
-            state: "collecting_metrics",
-          });
-
-        case "record_health_metric":
-          const { metric, value } = aiResponse.arguments;
-          return NextResponse.json({
-            message: "Got it! I've recorded that information.",
-            action: "record_metric",
-            metric,
-            value,
-            collected: { ...collected_metrics, [metric]: value },
-          });
-
-        case "calculate_risk":
-          // Check if all metrics collected
-          const required = [
-            "pregnancies",
-            "glucose",
-            "blood_pressure",
-            "bmi",
-            "age",
-          ];
-          const hasAll = required.every(
-            (m) => collected_metrics[m] !== undefined
-          );
-
-          if (hasAll) {
-            const result = calculateRiskAndNudge(collected_metrics);
-            return NextResponse.json({
-              message: `Based on your health metrics, your diabetes risk score is ${result.riskScore}/100.`,
-              action: "show_results",
-              result,
-            });
-          }
-          break;
-      }
+    if (aiResponse.type === "error") {
+      return NextResponse.json(
+        { error: aiResponse.message },
+        { status: 500 }
+      );
     }
 
-    // Regular message response
+    // Save conversation to database if user is authenticated
+    if (user) {
+      await supabase.from("chat_history").insert({
+        user_id: user.id,
+        role: "user",
+        text: message,
+      } as any);
+
+      await supabase.from("chat_history").insert({
+        user_id: user.id,
+        role: "assistant",
+        text: aiResponse.message,
+      } as any);
+    }
+
+    // Return AI message
     return NextResponse.json({
       message: aiResponse.message,
       action: "continue_conversation",

@@ -76,15 +76,21 @@ ALTER TABLE guest_sessions ENABLE ROW LEVEL SECURITY;
 -- RLS POLICIES - user_profiles
 -- ============================================
 
+-- Drop existing policies if they exist
+DROP POLICY IF EXISTS "Anyone can view user profiles" ON user_profiles;
+DROP POLICY IF EXISTS "Users can insert their own profile" ON user_profiles;
+DROP POLICY IF EXISTS "Users can update their own profile" ON user_profiles;
+DROP POLICY IF EXISTS "Service role can insert profiles" ON user_profiles;
+
 -- Allow users to view all profiles (for username lookups)
 CREATE POLICY "Anyone can view user profiles"
   ON user_profiles FOR SELECT
   USING (true);
 
--- Allow users to insert their own profile
+-- Allow authenticated users and service role to insert profiles
 CREATE POLICY "Users can insert their own profile"
   ON user_profiles FOR INSERT
-  WITH CHECK (auth.uid() = id);
+  WITH CHECK (auth.uid() = id OR auth.uid() IS NULL);
 
 -- Allow users to update their own profile
 CREATE POLICY "Users can update their own profile"
@@ -94,6 +100,11 @@ CREATE POLICY "Users can update their own profile"
 -- ============================================
 -- RLS POLICIES - chat_history
 -- ============================================
+
+-- Drop existing policies if they exist
+DROP POLICY IF EXISTS "Users can view their own chat history" ON chat_history;
+DROP POLICY IF EXISTS "Users can insert their own messages" ON chat_history;
+DROP POLICY IF EXISTS "Users can delete their own chat history" ON chat_history;
 
 -- Allow users to view their own chat history
 CREATE POLICY "Users can view their own chat history"
@@ -114,6 +125,11 @@ CREATE POLICY "Users can delete their own chat history"
 -- RLS POLICIES - action_plans
 -- ============================================
 
+-- Drop existing policies if they exist
+DROP POLICY IF EXISTS "Users can view their own action plan" ON action_plans;
+DROP POLICY IF EXISTS "Users can insert their own action plan" ON action_plans;
+DROP POLICY IF EXISTS "Users can update their own action plan" ON action_plans;
+
 -- Allow users to view their own action plan
 CREATE POLICY "Users can view their own action plan"
   ON action_plans FOR SELECT
@@ -132,6 +148,11 @@ CREATE POLICY "Users can update their own action plan"
 -- ============================================
 -- RLS POLICIES - guest_sessions
 -- ============================================
+
+-- Drop existing policies if they exist
+DROP POLICY IF EXISTS "Anyone can view guest sessions" ON guest_sessions;
+DROP POLICY IF EXISTS "Anyone can create guest sessions" ON guest_sessions;
+DROP POLICY IF EXISTS "Anyone can update guest sessions" ON guest_sessions;
 
 -- Allow anyone to read their own guest session (public access for guests)
 CREATE POLICY "Anyone can view guest sessions"
@@ -169,6 +190,7 @@ CREATE OR REPLACE FUNCTION handle_new_user()
 RETURNS TRIGGER
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public
 AS $$
 DECLARE
   random_username TEXT;
@@ -177,12 +199,12 @@ BEGIN
   -- Generate a random username if not provided
   LOOP
     random_username := 'user_' || substr(md5(random()::text), 1, 8);
-    SELECT EXISTS(SELECT 1 FROM user_profiles WHERE username = random_username) INTO username_exists;
+    SELECT EXISTS(SELECT 1 FROM public.user_profiles WHERE username = random_username) INTO username_exists;
     EXIT WHEN NOT username_exists;
   END LOOP;
   
-  -- Insert the profile with generated username
-  INSERT INTO user_profiles (id, username, display_name)
+  -- Insert the profile with generated username (bypasses RLS with SECURITY DEFINER)
+  INSERT INTO public.user_profiles (id, username, display_name)
   VALUES (
     NEW.id,
     random_username,
@@ -190,6 +212,11 @@ BEGIN
   );
   
   RETURN NEW;
+EXCEPTION
+  WHEN OTHERS THEN
+    -- Log error but don't fail the user creation
+    RAISE WARNING 'Could not create user profile: %', SQLERRM;
+    RETURN NEW;
 END;
 $$;
 

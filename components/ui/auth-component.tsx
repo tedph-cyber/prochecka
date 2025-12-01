@@ -406,24 +406,42 @@ const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
-const modalSteps = [
-  {
-    message: "Signing you up...",
-    icon: <Loader className="w-12 h-12 text-primary animate-spin" />,
-  },
-  {
-    message: "Onboarding you...",
-    icon: <Loader className="w-12 h-12 text-primary animate-spin" />,
-  },
-  {
-    message: "Finalizing...",
-    icon: <Loader className="w-12 h-12 text-primary animate-spin" />,
-  },
-  {
-    message: "Welcome Aboard!",
-    icon: <PartyPopper className="w-12 h-12 text-green-500" />,
-  },
-];
+const getModalSteps = (mode: "signup" | "signin") => {
+  if (mode === "signin") {
+    return [
+      {
+        message: "Signing you in...",
+        icon: <Loader className="w-12 h-12 text-primary animate-spin" />,
+      },
+      {
+        message: "Loading your dashboard...",
+        icon: <Loader className="w-12 h-12 text-primary animate-spin" />,
+      },
+      {
+        message: "Welcome Back!",
+        icon: <PartyPopper className="w-12 h-12 text-green-500" />,
+      },
+    ];
+  }
+  return [
+    {
+      message: "Signing you up...",
+      icon: <Loader className="w-12 h-12 text-primary animate-spin" />,
+    },
+    {
+      message: "Onboarding you...",
+      icon: <Loader className="w-12 h-12 text-primary animate-spin" />,
+    },
+    {
+      message: "Finalizing...",
+      icon: <Loader className="w-12 h-12 text-primary animate-spin" />,
+    },
+    {
+      message: "Welcome Aboard!",
+      icon: <PartyPopper className="w-12 h-12 text-green-500" />,
+    },
+  ];
+};
 const TEXT_LOOP_INTERVAL = 1.5;
 
 const DefaultLogo = () => (
@@ -459,6 +477,8 @@ export const AuthComponent = ({
   >("closed");
   const [modalErrorMessage, setModalErrorMessage] = useState("");
   const confettiRef = useRef<ConfettiRef>(null);
+
+  const modalSteps = getModalSteps(mode);
 
   const isEmailValid = /\S+@\S+\.\S+/.test(email);
   // Password must have at least 8 chars, 1 uppercase, 1 digit, 1 symbol
@@ -506,6 +526,7 @@ export const AuthComponent = ({
     if (onSubmit) {
       try {
         await onSubmit(email, password);
+        const modalSteps = getModalSteps(mode);
         const loadingStepsCount = modalSteps.length - 1;
         const totalDuration = loadingStepsCount * TEXT_LOOP_INTERVAL * 1000;
         setTimeout(() => {
@@ -519,6 +540,7 @@ export const AuthComponent = ({
         setModalStatus("error");
       }
     } else {
+      const modalSteps = getModalSteps(mode);
       const loadingStepsCount = modalSteps.length - 1;
       const totalDuration = loadingStepsCount * TEXT_LOOP_INTERVAL * 1000;
       setTimeout(() => {
@@ -1017,6 +1039,22 @@ export const AuthComponent = ({
               )}
             </AnimatePresence>
           </form>
+
+          {/* Redirect to other auth page */}
+          <BlurFade delay={0.3} className="mt-6">
+            <div className="text-center">
+              <p className="text-sm text-muted-foreground">
+                {mode === "signup" ? "Already have an account?" : "Don't have an account?"}
+                {" "}
+                <a 
+                  href={mode === "signup" ? "/auth/sign-in" : "/auth/sign-up"}
+                  className="text-primary font-semibold hover:underline transition-colors"
+                >
+                  {mode === "signup" ? "Sign in" : "Sign up"}
+                </a>
+              </p>
+            </div>
+          </BlurFade>
         </fieldset>
       </div>
     </div>

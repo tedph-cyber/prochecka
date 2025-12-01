@@ -25,6 +25,7 @@ import {
   DialogTitle, 
   DialogDescription 
 } from '@/components/ui/dialog'
+import EnhancedActionPlan from '@/components/EnhancedActionPlan'
 
 // Gradient background component (same as home/auth pages)
 const GradientBackground = () => (
@@ -169,7 +170,7 @@ export default function DashboardPage() {
     const welcomeMessage: Message = {
       id: Date.now().toString(),
       role: 'assistant',
-      content: `👋 Hi! I'm **Prochecka**, your diabetes health assistant!\n\nI can help you with:\n\n✨ **General health conversations** about diabetes, nutrition, and wellness\n\n📊 **PIMA Diabetes Risk Assessment** - A quick, scientifically validated test that evaluates your Type 2 diabetes risk. <span class="pima-link" data-action="open-pima-info" style="color: var(--color-primary); text-decoration: underline; cursor: pointer;">Learn more about PIMA</span>\n\n🍽️ **Personalized meal plans** and exercise routines\n💡 **Health tips** tailored just for you\n\nWhat would you like to talk about today?`,
+      content: `👋 Hi! I'm **Prochecka**, your diabetes health assistant!\n\nI can help you with:\n\n✨ **General health conversations** about diabetes, nutrition, and wellness\n\n📊 **PIMA Diabetes Risk Assessment** - A quick, scientifically validated test that evaluates your Type 2 diabetes risk. <span class="pima-link" data-action="open-pima-info" style="color: var(--color-primary); text-decoration: underline; cursor: pointer;">Learn more about PIMA</span>\n\n🍽️ **Personalized meal plans** and exercise routines\n\n💡 **Health tips** tailored just for you\n\nWhat would you like to talk about today?`,
       timestamp: new Date().toISOString()
     }
     
@@ -558,73 +559,12 @@ export default function DashboardPage() {
       {/* Action Plan Modal */}
       {showActionPlan && actionPlan && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-md">
-          <div className="backdrop-blur-xl bg-card/90 border border-border/50 w-full sm:w-[90%] sm:max-w-3xl sm:rounded-t-3xl rounded-t-3xl sm:rounded-b-3xl max-h-[85vh] sm:max-h-[80vh] flex flex-col shadow-2xl animate-in slide-in-from-bottom sm:zoom-in-95 duration-300">
-            {/* Modal Header */}
-            <div className="flex items-center justify-between px-5 sm:px-7 py-5 sm:py-6 border-b border-border/50 shrink-0">
-              <div>
-                <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground">
-                  Your Action Plan
-                </h2>
-                <p className="text-sm sm:text-base text-muted-foreground mt-1.5">
-                  Risk Score:{" "}
-                  <span className="font-semibold text-primary">
-                    {actionPlan.risk_score}/100
-                  </span>
-                </p>
-              </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setShowActionPlan(false)}
-                className="rounded-full"
-              >
-                <span className="text-2xl">×</span>
-              </Button>
-            </div>
-
-            {/* Modal Content */}
-            <div className="flex-1 overflow-y-auto px-5 sm:px-7 py-5 sm:py-6">
-              <div className="space-y-4 sm:space-y-6">
-                {/* Risk Factor */}
-                <div className="backdrop-blur-sm bg-primary/10 rounded-xl p-4 sm:p-5 border border-primary/20">
-                  <h3 className="text-base sm:text-lg font-semibold mb-2">
-                    Primary Factor
-                  </h3>
-                  <p className="text-sm sm:text-base text-muted-foreground">
-                    {actionPlan.factor}
-                  </p>
-                </div>
-
-                {/* Plan Message */}
-                <div>
-                  <h3 className="text-base sm:text-lg font-semibold mb-3">
-                    Personalized Plan
-                  </h3>
-                  <p className="text-sm sm:text-base leading-relaxed whitespace-pre-wrap">
-                    {actionPlan.plan_message}
-                  </p>
-                </div>
-
-                {/* Tasks */}
-                {actionPlan.tasks && actionPlan.tasks.length > 0 && (
-                  <div>
-                    <h3 className="text-base sm:text-lg font-semibold mb-3">
-                      Daily Tasks
-                    </h3>
-                    <div className="space-y-2">
-                      {actionPlan.tasks.map((task: any, index: number) => (
-                        <div
-                          key={index}
-                          className="backdrop-blur-sm bg-card/40 rounded-lg p-3 sm:p-4 border border-border/30"
-                        >
-                          <p className="text-sm sm:text-base">{task}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
+          <div className="backdrop-blur-xl bg-card/90 border border-border/50 w-full sm:w-[90%] sm:max-w-4xl sm:rounded-t-3xl rounded-t-3xl sm:rounded-b-3xl max-h-[85vh] sm:max-h-[85vh] overflow-y-auto shadow-2xl animate-in slide-in-from-bottom sm:zoom-in-95 duration-300 p-6">
+            <EnhancedActionPlan 
+              plan={actionPlan}
+              onUpdate={loadActionPlan}
+              onClose={() => setShowActionPlan(false)}
+            />
           </div>
         </div>
       )}

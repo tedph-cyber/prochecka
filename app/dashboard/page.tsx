@@ -18,6 +18,13 @@ import {
   setGuestData, 
   isGuestMode 
 } from '@/lib/guest-session'
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogDescription 
+} from '@/components/ui/dialog'
 
 // Gradient background component (same as home/auth pages)
 const GradientBackground = () => (
@@ -61,6 +68,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(false)
   const [showActionPlan, setShowActionPlan] = useState(false)
   const [showGuestPrompt, setShowGuestPrompt] = useState(false)
+  const [showPimaInfo, setShowPimaInfo] = useState(false)
   const [actionPlan, setActionPlan] = useState<any>(null)
   const [pimaAnswersCount, setPimaAnswersCount] = useState(0)
   const [isInPimaAssessment, setIsInPimaAssessment] = useState(false)
@@ -161,7 +169,7 @@ export default function DashboardPage() {
     const welcomeMessage: Message = {
       id: Date.now().toString(),
       role: 'assistant',
-      content: `👋 Hi! I'm **Prochecka**, your diabetes health assistant!\n\nI can help you with:\n\n✨ **General health conversations** about diabetes, nutrition, and wellness\n\n📊 **PIMA Diabetes Risk Assessment** - A scientifically validated test that evaluates your diabetes risk based on 8 key health metrics:\n   • Number of pregnancies\n   • Glucose level\n   • Blood pressure\n   • Skin thickness\n   • Insulin level\n   • Body Mass Index (BMI)\n   • Diabetes pedigree function\n   • Age\n\n   The assessment takes just a few minutes and provides a personalized risk score with actionable health recommendations.\n\n🍽️ **Personalized meal plans** and exercise routines\n💡 **Health tips** tailored just for you\n\nWhat would you like to talk about today?`,
+      content: `👋 Hi! I'm **Prochecka**, your diabetes health assistant!\n\nI can help you with:\n\n✨ **General health conversations** about diabetes, nutrition, and wellness\n\n📊 **PIMA Diabetes Risk Assessment** - A quick, scientifically validated test that evaluates your Type 2 diabetes risk. <span class="pima-link" data-action="open-pima-info" style="color: var(--color-primary); text-decoration: underline; cursor: pointer;">Learn more about PIMA</span>\n\n🍽️ **Personalized meal plans** and exercise routines\n💡 **Health tips** tailored just for you\n\nWhat would you like to talk about today?`,
       timestamp: new Date().toISOString()
     }
     
@@ -372,6 +380,26 @@ export default function DashboardPage() {
     const lines = content.split('\n')
     
     return lines.map((line, lineIndex) => {
+      // Check if line contains the PIMA link
+      if (line.includes('data-action="open-pima-info"')) {
+        // Parse and render the link as a clickable element
+        const parts = line.split(/<span class="pima-link"[^>]*>|<\/span>/)
+        return (
+          <div key={lineIndex}>
+            {parts[0]}
+            {parts[1] && (
+              <span 
+                className="text-primary underline cursor-pointer hover:text-primary/80 transition-colors"
+                onClick={() => setShowPimaInfo(true)}
+              >
+                {parts[1]}
+              </span>
+            )}
+            {parts[2]}
+          </div>
+        )
+      }
+
       // Process each line for inline formatting
       const parts: React.ReactNode[] = []
       let currentIndex = 0
@@ -608,6 +636,103 @@ export default function DashboardPage() {
           onClose={() => setShowGuestPrompt(false)}
         />
       )}
+
+      {/* PIMA Information Dialog */}
+      <Dialog open={showPimaInfo} onOpenChange={setShowPimaInfo}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>📊 About the PIMA Diabetes Test</DialogTitle>
+            <DialogDescription>
+              Understanding your diabetes risk assessment
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 text-sm sm:text-base">
+            <p className="text-foreground leading-relaxed">
+              The <strong>PIMA Diabetes Test</strong> is a scientifically validated assessment tool developed using data from the Pima Indian population, who have one of the highest rates of Type 2 diabetes in the world. This makes it an exceptionally accurate predictor of diabetes risk.
+            </p>
+
+            <div>
+              <h4 className="font-semibold text-foreground mb-2">The Test Evaluates 8 Key Health Metrics:</h4>
+              <div className="space-y-2">
+                <div className="flex gap-2">
+                  <span className="text-primary">🤰</span>
+                  <div>
+                    <strong>Pregnancies:</strong> Number of times pregnant (women only)
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <span className="text-primary">🩸</span>
+                  <div>
+                    <strong>Glucose Level:</strong> Plasma glucose concentration (mg/dL)
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <span className="text-primary">💓</span>
+                  <div>
+                    <strong>Blood Pressure:</strong> Diastolic blood pressure (mm Hg)
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <span className="text-primary">📏</span>
+                  <div>
+                    <strong>Skin Thickness:</strong> Triceps skin fold thickness (mm)
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <span className="text-primary">💉</span>
+                  <div>
+                    <strong>Insulin:</strong> 2-hour serum insulin (μU/mL)
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <span className="text-primary">⚖️</span>
+                  <div>
+                    <strong>BMI:</strong> Body mass index (weight in kg/(height in m)²)
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <span className="text-primary">🧬</span>
+                  <div>
+                    <strong>Diabetes Pedigree:</strong> Family history function score
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <span className="text-primary">🎂</span>
+                  <div>
+                    <strong>Age:</strong> Your current age in years
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-primary/10 rounded-lg p-4 border border-primary/20">
+              <h4 className="font-semibold text-foreground mb-2">✨ What You'll Get:</h4>
+              <ul className="space-y-1 text-sm">
+                <li>• Personalized diabetes risk score (0-100)</li>
+                <li>• Identification of your primary risk factors</li>
+                <li>• Actionable health recommendations</li>
+                <li>• Customized meal and exercise plans</li>
+                <li>• Ongoing support and tracking</li>
+              </ul>
+            </div>
+
+            <p className="text-muted-foreground text-sm italic">
+              <strong>Note:</strong> The assessment takes just 3-5 minutes. Don't worry if you don't know exact values - estimates work fine! This is a screening tool, not a diagnosis. Always consult with healthcare professionals for medical advice.
+            </p>
+
+            <Button 
+              onClick={() => {
+                setShowPimaInfo(false)
+                startPimaAssessment()
+              }}
+              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
+            >
+              Start PIMA Assessment Now
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

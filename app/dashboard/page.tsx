@@ -65,6 +65,7 @@ export default function DashboardPage() {
   const [pimaAnswersCount, setPimaAnswersCount] = useState(0)
   const [isInPimaAssessment, setIsInPimaAssessment] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const abortControllerRef = useRef<AbortController | null>(null)
   const router = useRouter()
   const supabase = createClient()
 
@@ -160,7 +161,7 @@ export default function DashboardPage() {
     const welcomeMessage: Message = {
       id: Date.now().toString(),
       role: 'assistant',
-      content: `👋 Hi! I'm **Prochecka**, your diabetes health assistant!\n\nI can help you with:\n\n✨ **General health conversations** about diabetes, nutrition, and wellness\n📊 **PIMA diabetes risk assessment** (8 health questions)\n🍽️ **Personalized meal plans** and exercise routines\n💡 **Health tips** tailored just for you\n\nWhat would you like to talk about today?`,
+      content: `👋 Hi! I'm **Prochecka**, your diabetes health assistant!\n\nI can help you with:\n\n✨ **General health conversations** about diabetes, nutrition, and wellness\n\n📊 **PIMA Diabetes Risk Assessment** - A scientifically validated test that evaluates your diabetes risk based on 8 key health metrics:\n   • Number of pregnancies\n   • Glucose level\n   • Blood pressure\n   • Skin thickness\n   • Insulin level\n   • Body Mass Index (BMI)\n   • Diabetes pedigree function\n   • Age\n\n   The assessment takes just a few minutes and provides a personalized risk score with actionable health recommendations.\n\n🍽️ **Personalized meal plans** and exercise routines\n💡 **Health tips** tailored just for you\n\nWhat would you like to talk about today?`,
       timestamp: new Date().toISOString()
     }
     
@@ -197,6 +198,10 @@ export default function DashboardPage() {
     setMessages(newMessages)
     setInput('')
 
+    // Create new abort controller for this request
+    const abortController = new AbortController()
+    abortControllerRef.current = abortController
+
     try {
       // Build conversation history for AI
       const conversationHistory = newMessages.map(msg => ({
@@ -204,14 +209,15 @@ export default function DashboardPage() {
         content: msg.content
       }))
 
-      // Call AI chat endpoint
+      // Call AI chat endpoint with abort signal
       const response = await fetch('/api/ai-chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: userMessage.content,
           conversation_history: conversationHistory.slice(0, -1) // Exclude the message we just sent
-        })
+        }),
+        signal: abortController.signal
       })
 
       const data = await response.json()
@@ -278,18 +284,32 @@ export default function DashboardPage() {
       }
 
     } catch (error: any) {
-      console.error('Chat error:', error)
-      toast.error(error.message || 'Failed to send message')
-      
-      // Add error message
-      const errorMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: "Sorry, I encountered an error. Please make sure you've set up your OPENROUTER_API_KEY in the .env file. Check the console for more details.",
-        timestamp: new Date().toISOString()
+      // Handle abort specifically
+      if (error.name === 'AbortError' || abortController.signal.aborted) {
+        console.log('Request was aborted by user')
+        // Don't show error message for user-initiated stops
+      } else {
+        console.error('Chat error:', error)
+        toast.error(error.message || 'Failed to send message')
+        
+        // Add error message
+        const errorMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          role: 'assistant',
+          content: "Sorry, I encountered an error. Please make sure you've set up your OPENROUTER_API_KEY in the .env file. Check the console for more details.",
+          timestamp: new Date().toISOString()
+        }
+        setMessages([...newMessages, errorMessage])
       }
-      setMessages([...newMessages, errorMessage])
     } finally {
+      setLoading(false)
+      abortControllerRef.current = null
+    }
+  }
+
+  const handleStop = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort()
       setLoading(false)
     }
   }
@@ -344,6 +364,57 @@ export default function DashboardPage() {
       return parseInt(percentMatch[1])
     }
     return null
+  }
+
+  // Format markdown-style text for display
+  const formatMessageContent = (content: string) => {
+    // Split by lines to preserve structure
+    const lines = content.split('\n')
+    
+    return lines.map((line, lineIndex) => {
+      // Process each line for inline formatting
+      const parts: React.ReactNode[] = []
+      let currentIndex = 0
+      
+      // Match **bold**, *italic*, `code`, and bullet points
+      const regex = /(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`|^[•\-\*]\s)/g
+      let match
+      
+      while ((match = regex.exec(line)) !== null) {
+        // Add text before match
+        if (match.index > currentIndex) {
+          parts.push(line.substring(currentIndex, match.index))
+        }
+        
+        const matched = match[0]
+        if (matched.startsWith('**') && matched.endsWith('**')) {
+          // Bold text
+          parts.push(<strong key={`${lineIndex}-${match.index}`}>{matched.slice(2, -2)}</strong>)
+        } else if (matched.startsWith('*') && matched.endsWith('*') && !matched.startsWith('**')) {
+          // Italic text
+          parts.push(<em key={`${lineIndex}-${match.index}`}>{matched.slice(1, -1)}</em>)
+        } else if (matched.startsWith('`') && matched.endsWith('`')) {
+          // Code text
+          parts.push(<code key={`${lineIndex}-${match.index}`} className="bg-muted px-1 rounded text-sm">{matched.slice(1, -1)}</code>)
+        } else if (matched.match(/^[•\-\*]\s/)) {
+          // Bullet point - already captured
+          parts.push(matched)
+        }
+        
+        currentIndex = match.index + matched.length
+      }
+      
+      // Add remaining text
+      if (currentIndex < line.length) {
+        parts.push(line.substring(currentIndex))
+      }
+      
+      return (
+        <div key={lineIndex}>
+          {parts.length > 0 ? parts : line}
+        </div>
+      )
+    })
   }
 
   return (
@@ -401,8 +472,8 @@ export default function DashboardPage() {
                       : "backdrop-blur-md bg-card/60 text-card-foreground shadow-lg border border-border/50"
                   }`}
                 >
-                  <div className="whitespace-pre-wrap text-sm sm:text-base md:text-lg leading-relaxed">
-                    {message.content}
+                  <div className="text-sm sm:text-base md:text-lg leading-relaxed space-y-1">
+                    {formatMessageContent(message.content)}
                   </div>
                   <div
                     className={`text-xs sm:text-sm mt-2 sm:mt-2.5 opacity-70`}
@@ -446,7 +517,7 @@ export default function DashboardPage() {
                 onChange={(e) => setInput(e.target.value)}
                 onSubmit={handleChatSubmit}
                 loading={loading}
-                onStop={() => setLoading(false)}
+                onStop={handleStop}
               >
                 <ChatInputTextArea placeholder="Ask me anything about diabetes health..." />
                 <ChatInputSubmit />

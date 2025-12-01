@@ -427,9 +427,8 @@ const modalSteps = [
 const TEXT_LOOP_INTERVAL = 1.5;
 
 const DefaultLogo = () => (
-  <div className="bg-primary text-primary-foreground rounded-md p-1.5">
-    {" "}
-    <Image src="/images/logo.png" alt="Prochecka Logo" width={24} height={24} />{" "}
+  <div className="bg-white rounded-md p-1.5">
+    <Image src="/images/logo.png" alt="Prochecka Logo" width={24} height={24} />
   </div>
 );
 
@@ -462,8 +461,13 @@ export const AuthComponent = ({
   const confettiRef = useRef<ConfettiRef>(null);
 
   const isEmailValid = /\S+@\S+\.\S+/.test(email);
-  const isPasswordValid = password.length >= 6;
-  const isConfirmPasswordValid = confirmPassword.length >= 6;
+  // Password must have at least 8 chars, 1 uppercase, 1 digit, 1 symbol
+  const hasMinLength = password.length >= 8;
+  const hasUpperCase = /[A-Z]/.test(password);
+  const hasDigit = /[0-9]/.test(password);
+  const hasSymbol = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+  const isPasswordValid = hasMinLength && hasUpperCase && hasDigit && hasSymbol;
+  const isConfirmPasswordValid = confirmPassword.length >= 8;
 
   const passwordInputRef = useRef<HTMLInputElement>(null);
   const confirmPasswordInputRef = useRef<HTMLInputElement>(null);

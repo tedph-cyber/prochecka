@@ -6,8 +6,13 @@ import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 
 const Logo = () => (
-  <div className="text-primary-foreground rounded-md p-1.5 text-3xl">
-        <Image src="/images/logo.png" alt="Prochecka Logo" width={24} height={24} />{" "}
+  <div className="bg-white rounded-lg p-2.5 shadow-sm hover:shadow-md transition-shadow cursor-pointer" onClick={() => window.location.href = '/'}>
+    <Image 
+      src="/images/logo.png" 
+      alt="Prochecka Logo" 
+      width={36} 
+      height={36}
+    />
   </div>
 )
 

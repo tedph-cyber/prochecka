@@ -49,12 +49,15 @@ export function Header({
       })}
     >
       <nav className="mx-auto flex h-14 items-center justify-between px-3 sm:px-4 md:px-6">
-        <div className="flex items-center gap-2 hover:bg-accent rounded-md p-2 transition-colors">
-          <div className="rounded-md p-1">
-            <Image src="/images/logo.png" alt="Prochecka Logo" width={28} height={28} className="sm:w-8 sm:h-8" />
+        <button 
+          onClick={() => window.location.href = '/'}
+          className="flex items-center gap-2 rounded-md p-2"
+        >
+          <div className="bg-white rounded-md p-1.5">
+            <Image src="/images/logo.png" alt="Prochecka Logo" width={36} height={36} />
           </div>
           <h1 className="text-lg sm:text-xl font-bold text-foreground">Prochecka</h1>
-        </div>
+        </button>
 
         <div className="hidden items-center gap-1.5 sm:gap-2 md:flex">
           {isGuest && (

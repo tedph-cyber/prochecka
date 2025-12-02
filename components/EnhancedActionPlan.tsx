@@ -1,10 +1,8 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import DietTimetable from './DietTimetable'
-import { Calendar, Dumbbell, Heart, Target, TrendingUp, Utensils } from 'lucide-react'
+import { Calendar, Dumbbell, Heart, Target, TrendingUp, Utensils, AlertTriangle } from 'lucide-react'
 
 interface Task {
   id: string
@@ -26,12 +24,25 @@ interface EnhancedActionPlanProps {
   plan: ActionPlan | null
   onUpdate: () => void
   onClose?: () => void
+  onOpenDiet?: () => void
+  onOpenExercise?: () => void
+  onOpenRiskAlert?: () => void
 }
 
-export default function EnhancedActionPlan({ plan, onUpdate, onClose }: EnhancedActionPlanProps) {
-  const [showDietModal, setShowDietModal] = useState(false)
-  const [showExerciseModal, setShowExerciseModal] = useState(false)
+export default function EnhancedActionPlan({ plan, onUpdate, onClose, onOpenDiet, onOpenExercise, onOpenRiskAlert }: EnhancedActionPlanProps) {
   const [updatingTask, setUpdatingTask] = useState<string | null>(null)
+
+  // Handle Escape key
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && onClose) {
+        onClose()
+      }
+    }
+
+    window.addEventListener('keydown', handleEscape)
+    return () => window.removeEventListener('keydown', handleEscape)
+  }, [onClose])
 
   const handleToggleTask = async (taskId: string, completed: boolean) => {
     setUpdatingTask(taskId)
@@ -135,22 +146,48 @@ export default function EnhancedActionPlan({ plan, onUpdate, onClose }: Enhanced
       </div>
 
       {/* Quick Actions */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-3 gap-3">
         <Button
-          onClick={() => setShowDietModal(true)}
+          onClick={() => {
+            if (onOpenRiskAlert) {
+              onOpenRiskAlert()
+              if (onClose) onClose()
+            }
+          }}
           variant="outline"
-          className="h-auto py-4 flex-col gap-2 hover:bg-primary/5 hover:border-primary"
+          className="h-auto py-4 flex-col gap-2 hover:bg-red-50 hover:border-red-500 dark:hover:bg-red-950"
+          disabled={!onOpenRiskAlert}
         >
-          <Utensils className="w-6 h-6 text-primary" />
-          <span className="text-sm font-semibold">Diet Plan</span>
+          <AlertTriangle className="w-6 h-6 text-red-600" />
+          <span className="text-xs font-semibold">AI Risk Alert</span>
         </Button>
         <Button
-          onClick={() => setShowExerciseModal(true)}
+          onClick={() => {
+            if (onOpenDiet) {
+              onOpenDiet()
+              if (onClose) onClose()
+            }
+          }}
           variant="outline"
           className="h-auto py-4 flex-col gap-2 hover:bg-primary/5 hover:border-primary"
+          disabled={!onOpenDiet}
+        >
+          <Utensils className="w-6 h-6 text-primary" />
+          <span className="text-xs font-semibold">Diet Plan</span>
+        </Button>
+        <Button
+          onClick={() => {
+            if (onOpenExercise) {
+              onOpenExercise()
+              if (onClose) onClose()
+            }
+          }}
+          variant="outline"
+          className="h-auto py-4 flex-col gap-2 hover:bg-primary/5 hover:border-primary"
+          disabled={!onOpenExercise}
         >
           <Dumbbell className="w-6 h-6 text-primary" />
-          <span className="text-sm font-semibold">Exercise Plan</span>
+          <span className="text-xs font-semibold">Exercise</span>
         </Button>
       </div>
 
@@ -227,27 +264,6 @@ export default function EnhancedActionPlan({ plan, onUpdate, onClose }: Enhanced
         </div>
       </div>
 
-      {/* Diet Modal */}
-      <Dialog open={showDietModal} onOpenChange={setShowDietModal}>
-        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
-          <DietTimetable onClose={() => setShowDietModal(false)} />
-        </DialogContent>
-      </Dialog>
-
-      {/* Exercise Modal - Placeholder */}
-      <Dialog open={showExerciseModal} onOpenChange={setShowExerciseModal}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Exercise Plan</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <p className="text-sm text-muted-foreground">
-              Your personalized exercise routine will appear here.
-            </p>
-            {/* Add ExercisePlan component here */}
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }

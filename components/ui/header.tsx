@@ -16,6 +16,9 @@ interface HeaderProps {
   onSignOut: () => void;
   onResetChat?: () => void;
   onViewPlan?: () => void;
+  onOpenDiet?: () => void;
+  onOpenExercise?: () => void;
+  onOpenRiskAlert?: () => void;
 }
 
 export function Header({
@@ -26,6 +29,9 @@ export function Header({
   onSignOut,
   onResetChat,
   onViewPlan,
+  onOpenDiet,
+  onOpenExercise,
+  onOpenRiskAlert,
 }: HeaderProps) {
   const [open, setOpen] = React.useState(false);
   const scrolled = useScroll(10);
@@ -43,8 +49,8 @@ export function Header({
 
   return (
     <header
-      className={cn('sticky top-0 z-50 w-full border-b border-transparent', {
-        'bg-background/95 supports-backdrop-filter:bg-background/50 border-border backdrop-blur-lg':
+      className={cn('sticky top-0 z-100 w-full border-b bg-background/80 backdrop-blur-md', {
+        'bg-background/95 border-border':
           scrolled,
       })}
     >
@@ -72,14 +78,49 @@ export function Header({
             </p>
           )}
           {actionPlan && (
+            <>
+              <Button
+                onClick={onViewPlan}
+                variant="outline"
+                size="sm"
+                className="bg-green-600 text-white hover:bg-green-700 border-green-600"
+              >
+                <span className="hidden lg:inline">View Plan</span>
+                <span className="lg:hidden">Plan</span>
+              </Button>
+              {onOpenRiskAlert && (
+                <Button
+                  onClick={onOpenRiskAlert}
+                  variant="outline"
+                  size="sm"
+                  className="bg-red-600 text-white hover:bg-red-700 border-red-600"
+                >
+                  <span className="hidden lg:inline">AI Risk</span>
+                  <span className="lg:hidden">🚨</span>
+                </Button>
+              )}
+            </>
+          )}
+          {onOpenDiet && (
             <Button
-              onClick={onViewPlan}
+              onClick={onOpenDiet}
               variant="outline"
               size="sm"
-              className="bg-green-600 text-white hover:bg-green-700 border-green-600"
+              className="bg-blue-600 text-white hover:bg-blue-700 border-blue-600"
             >
-              <span className="hidden sm:inline">View Plan</span>
-              <span className="sm:hidden">Plan</span>
+              <span className="hidden lg:inline">Diet</span>
+              <span className="lg:hidden">🍽️</span>
+            </Button>
+          )}
+          {onOpenExercise && (
+            <Button
+              onClick={onOpenExercise}
+              variant="outline"
+              size="sm"
+              className="bg-purple-600 text-white hover:bg-purple-700 border-purple-600"
+            >
+              <span className="hidden lg:inline">Exercise</span>
+              <span className="lg:hidden">💪</span>
             </Button>
           )}
           {messagesLength > 0 && (
@@ -88,6 +129,12 @@ export function Header({
               <span className="sm:hidden">New</span>
             </Button>
           )}
+          <Button variant="outline" size="sm" asChild>
+            <a href="/education">
+              <span className="hidden sm:inline">Learn</span>
+              <span className="sm:hidden">📚</span>
+            </a>
+          </Button>
           {isGuest ? (
             <>
               <Button variant="outline" size="sm" asChild>
@@ -124,17 +171,61 @@ export function Header({
             </div>
           )}
           {actionPlan && onViewPlan && (
+            <>
+              <button
+                onClick={() => {
+                  onViewPlan();
+                  setOpen(false);
+                }}
+                className={buttonVariants({
+                  variant: 'ghost',
+                  className: 'justify-start bg-green-600 text-white hover:bg-green-700',
+                })}
+              >
+                📊 View Plan
+              </button>
+              {onOpenRiskAlert && (
+                <button
+                  onClick={() => {
+                    onOpenRiskAlert();
+                    setOpen(false);
+                  }}
+                  className={buttonVariants({
+                    variant: 'ghost',
+                    className: 'justify-start bg-red-600 text-white hover:bg-red-700',
+                  })}
+                >
+                  🚨 AI Risk Alert
+                </button>
+              )}
+            </>
+          )}
+          {onOpenDiet && (
             <button
               onClick={() => {
-                onViewPlan();
+                onOpenDiet();
                 setOpen(false);
               }}
               className={buttonVariants({
                 variant: 'ghost',
-                className: 'justify-start bg-green-600 text-white hover:bg-green-700',
+                className: 'justify-start bg-blue-600 text-white hover:bg-blue-700',
               })}
             >
-              View Plan
+              🍽️ Diet Timetable
+            </button>
+          )}
+          {onOpenExercise && (
+            <button
+              onClick={() => {
+                onOpenExercise();
+                setOpen(false);
+              }}
+              className={buttonVariants({
+                variant: 'ghost',
+                className: 'justify-start bg-purple-600 text-white hover:bg-purple-700',
+              })}
+            >
+              💪 Exercise Routine
             </button>
           )}
           {messagesLength > 0 && onResetChat && (
@@ -151,6 +242,17 @@ export function Header({
               New Assessment
             </button>
           )}
+          <button
+            onClick={() => {
+              window.location.href = '/education';
+            }}
+            className={buttonVariants({
+              variant: 'ghost',
+              className: 'justify-start',
+            })}
+          >
+            📚 Learn
+          </button>
         </div>
         <div className="flex flex-col gap-2">
           {isGuest ? (
@@ -190,7 +292,7 @@ function MobileMenu({ open, children, className, ...props }: MobileMenuProps) {
       id="mobile-menu"
       className={cn(
         'bg-background/95 supports-backdrop-filter:bg-background/50 backdrop-blur-lg',
-        'fixed top-14 right-0 bottom-0 left-0 z-40 flex flex-col overflow-hidden border-y md:hidden',
+        'fixed top-14 right-0 bottom-0 left-0 z-90 flex flex-col overflow-hidden border-y md:hidden',
       )}
     >
       <div

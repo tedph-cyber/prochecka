@@ -8,6 +8,8 @@ export interface GuestAssessmentData {
   inputs: any
   result?: any
   timestamp: string
+  dietProgress?: string[]
+  exerciseProgress?: string[]
 }
 
 export function getGuestToken(): string | null {

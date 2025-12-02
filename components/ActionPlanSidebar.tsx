@@ -155,7 +155,7 @@ export default function ActionPlanSidebar({ plan, onUpdate }: ActionPlanSidebarP
         </div>
 
         {/* Motivation Message */}
-        <div className="mt-6 p-4 bg-gradient-to-br from-purple-50 to-pink-50 border border-purple-200 rounded-lg">
+        <div className="mt-6 p-4 bg-linear-to-br from-purple-50 to-pink-50 border border-purple-200 rounded-lg">
           <div className="flex items-start gap-3">
             <div className="text-2xl">💪</div>
             <div>

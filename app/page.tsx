@@ -85,7 +85,7 @@ export default function Home() {
         <header className="px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
           <nav className="flex items-center justify-between max-w-7xl mx-auto">
             <div className="flex items-center gap-2">
-              <div className="bg-white rounded-md p-1.5">
+              <div className="rounded-lg p-1.5">
                 <Image
                   src="/images/logo.png"
                   alt="Prochecka Logo"

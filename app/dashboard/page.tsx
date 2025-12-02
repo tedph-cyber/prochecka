@@ -1,31 +1,36 @@
-'use client'
+"use client";
 
-import { useEffect, useState, useRef } from 'react'
-import { createClient } from '@/lib/supabase/client'
-import { useRouter } from 'next/navigation'
-import { Header } from '@/components/ui/header'
+import { useEffect, useState, useRef } from "react";
+import { createClient } from "@/lib/supabase/client";
+import { useRouter } from "next/navigation";
+import { Header } from "@/components/ui/header";
+import { Coffee, Sun, Moon, Clock, Utensils, Dumbbell } from "lucide-react";
 import {
   ChatInput,
   ChatInputSubmit,
   ChatInputTextArea,
-} from "@/components/ui/chat-input"
-import { toast } from "sonner"
-import { Button } from "@/components/ui/button"
-import GuestSignInPrompt from '@/components/GuestSignInPrompt'
-import { 
-  createOrGetGuestSession, 
-  getGuestData, 
-  setGuestData, 
-  isGuestMode 
-} from '@/lib/guest-session'
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogDescription 
-} from '@/components/ui/dialog'
-import EnhancedActionPlan from '@/components/EnhancedActionPlan'
+} from "@/components/ui/chat-input";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import GuestSignInPrompt from "@/components/GuestSignInPrompt";
+import {
+  createOrGetGuestSession,
+  getGuestData,
+  setGuestData,
+  isGuestMode,
+} from "@/lib/guest-session";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import EnhancedActionPlan from "@/components/EnhancedActionPlan";
+import DietTimetable from "@/components/DietTimetable";
+import ComplicationPrediction from "@/components/ComplicationPrediction";
+import ExerciseRoutine from "@/components/ExerciseRoutine";
+import EmergencyButton from "@/components/EmergencyButton";
 
 // Gradient background component (same as home/auth pages)
 const GradientBackground = () => (
@@ -33,107 +38,190 @@ const GradientBackground = () => (
     <style>
       {`@keyframes float1 { 0% { transform: translate(0, 0); } 50% { transform: translate(-10px, 10px); } 100% { transform: translate(0, 0); } } @keyframes float2 { 0% { transform: translate(0, 0); } 50% { transform: translate(10px, -10px); } 100% { transform: translate(0, 0); } }`}
     </style>
-    <svg width="100%" height="100%" viewBox="0 0 800 600" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice" className="absolute top-0 left-0 w-full h-full">
+    <svg
+      width="100%"
+      height="100%"
+      viewBox="0 0 800 600"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      preserveAspectRatio="xMidYMid slice"
+      className="absolute top-0 left-0 w-full h-full"
+    >
       <defs>
-        <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style={{stopColor: 'var(--color-primary)', stopOpacity:0.8}} /><stop offset="100%" style={{stopColor: 'var(--color-chart-3)', stopOpacity:0.6}} /></linearGradient>
-        <linearGradient id="grad2" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style={{stopColor: 'var(--color-chart-4)', stopOpacity:0.9}} /><stop offset="50%" style={{stopColor: 'var(--color-secondary)', stopOpacity:0.7}} /><stop offset="100%" style={{stopColor: 'var(--color-chart-1)', stopOpacity:0.6}} /></linearGradient>
-        <radialGradient id="grad3" cx="50%" cy="50%" r="50%"><stop offset="0%" style={{stopColor: 'var(--color-destructive)', stopOpacity:0.8}} /><stop offset="100%" style={{stopColor: 'var(--color-chart-5)', stopOpacity:0.4}} /></radialGradient>
-        <filter id="blur1" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="35"/></filter>
-        <filter id="blur2" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="25"/></filter>
-        <filter id="blur3" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="45"/></filter>
+        <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop
+            offset="0%"
+            style={{ stopColor: "var(--color-primary)", stopOpacity: 0.8 }}
+          />
+          <stop
+            offset="100%"
+            style={{ stopColor: "var(--color-chart-3)", stopOpacity: 0.6 }}
+          />
+        </linearGradient>
+        <linearGradient id="grad2" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop
+            offset="0%"
+            style={{ stopColor: "var(--color-chart-4)", stopOpacity: 0.9 }}
+          />
+          <stop
+            offset="50%"
+            style={{ stopColor: "var(--color-secondary)", stopOpacity: 0.7 }}
+          />
+          <stop
+            offset="100%"
+            style={{ stopColor: "var(--color-chart-1)", stopOpacity: 0.6 }}
+          />
+        </linearGradient>
+        <radialGradient id="grad3" cx="50%" cy="50%" r="50%">
+          <stop
+            offset="0%"
+            style={{ stopColor: "var(--color-destructive)", stopOpacity: 0.8 }}
+          />
+          <stop
+            offset="100%"
+            style={{ stopColor: "var(--color-chart-5)", stopOpacity: 0.4 }}
+          />
+        </radialGradient>
+        <filter id="blur1" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="35" />
+        </filter>
+        <filter id="blur2" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="25" />
+        </filter>
+        <filter id="blur3" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="45" />
+        </filter>
       </defs>
-      <g style={{ animation: 'float1 20s ease-in-out infinite' }}>
-        <ellipse cx="200" cy="500" rx="250" ry="180" fill="url(#grad1)" filter="url(#blur1)" transform="rotate(-30 200 500)"/>
-        <rect x="500" y="100" width="300" height="250" rx="80" fill="url(#grad2)" filter="url(#blur2)" transform="rotate(15 650 225)"/>
+      <g style={{ animation: "float1 20s ease-in-out infinite" }}>
+        <ellipse
+          cx="200"
+          cy="500"
+          rx="250"
+          ry="180"
+          fill="url(#grad1)"
+          filter="url(#blur1)"
+          transform="rotate(-30 200 500)"
+        />
+        <rect
+          x="500"
+          y="100"
+          width="300"
+          height="250"
+          rx="80"
+          fill="url(#grad2)"
+          filter="url(#blur2)"
+          transform="rotate(15 650 225)"
+        />
       </g>
-      <g style={{ animation: 'float2 25s ease-in-out infinite' }}>
-        <circle cx="650" cy="450" r="150" fill="url(#grad3)" filter="url(#blur3)" opacity="0.7"/>
-        <ellipse cx="50" cy="150" rx="180" ry="120" fill="var(--color-accent)" filter="url(#blur2)" opacity="0.8"/>
+      <g style={{ animation: "float2 25s ease-in-out infinite" }}>
+        <circle
+          cx="650"
+          cy="450"
+          r="150"
+          fill="url(#grad3)"
+          filter="url(#blur3)"
+          opacity="0.7"
+        />
+        <ellipse
+          cx="50"
+          cy="150"
+          rx="180"
+          ry="120"
+          fill="var(--color-accent)"
+          filter="url(#blur2)"
+          opacity="0.8"
+        />
       </g>
     </svg>
   </>
-)
+);
 
 interface Message {
-  id: string
-  role: 'user' | 'assistant'
-  content: string
-  timestamp: string
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  timestamp: string;
 }
 
 export default function DashboardPage() {
-  const [user, setUser] = useState<any>(null)
-  const [isGuest, setIsGuest] = useState(false)
-  const [messages, setMessages] = useState<Message[]>([])
-  const [input, setInput] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [showActionPlan, setShowActionPlan] = useState(false)
-  const [showGuestPrompt, setShowGuestPrompt] = useState(false)
-  const [showPimaInfo, setShowPimaInfo] = useState(false)
-  const [actionPlan, setActionPlan] = useState<any>(null)
-  const [pimaAnswersCount, setPimaAnswersCount] = useState(0)
-  const [isInPimaAssessment, setIsInPimaAssessment] = useState(false)
-  const messagesEndRef = useRef<HTMLDivElement>(null)
-  const abortControllerRef = useRef<AbortController | null>(null)
-  const router = useRouter()
-  const supabase = createClient()
+  const [user, setUser] = useState<any>(null);
+  const [isGuest, setIsGuest] = useState(false);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [showActionPlan, setShowActionPlan] = useState(false);
+  const [showGuestPrompt, setShowGuestPrompt] = useState(false);
+  const [showPimaInfo, setShowPimaInfo] = useState(false);
+  const [actionPlan, setActionPlan] = useState<any>(null);
+  const [pimaAnswersCount, setPimaAnswersCount] = useState(0);
+  const [isInPimaAssessment, setIsInPimaAssessment] = useState(false);
+  const [lastPimaQuestion, setLastPimaQuestion] = useState<string>("");
+  const [showDietModal, setShowDietModal] = useState(false);
+  const [showExerciseModal, setShowExerciseModal] = useState(false);
+  const [showComplicationModal, setShowComplicationModal] = useState(false);
+  const [customDietPlan, setCustomDietPlan] = useState<any>(null);
+  const [customExercisePlan, setCustomExercisePlan] = useState<any>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const router = useRouter();
+  const supabase = createClient();
 
   useEffect(() => {
-    initializeSession()
-  }, [])
+    initializeSession();
+  }, []);
 
   useEffect(() => {
-    scrollToBottom()
-  }, [messages])
+    scrollToBottom();
+  }, [messages]);
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
 
   const initializeSession = async () => {
     const {
       data: { user },
-    } = await supabase.auth.getUser()
-    
+    } = await supabase.auth.getUser();
+
     if (user) {
       // Authenticated user
-      setUser(user)
-      setIsGuest(false)
-      loadChatHistory()
-      loadActionPlan()
+      setUser(user);
+      setIsGuest(false);
+      loadChatHistory();
+      loadActionPlan();
     } else {
       // Guest mode
-      setIsGuest(true)
-      await createOrGetGuestSession()
-      loadGuestData()
+      setIsGuest(true);
+      await createOrGetGuestSession();
+      loadGuestData();
     }
-  }
+  };
 
   const loadGuestData = () => {
-    const guestData = getGuestData()
+    const guestData = getGuestData();
     if (guestData?.messages && guestData.messages.length > 0) {
       // Convert old format to new if needed
       const convertedMessages = guestData.messages.map((msg: any) => ({
         id: msg.id || Date.now().toString(),
         role: msg.role,
         content: msg.text || msg.content,
-        timestamp: msg.timestamp
-      }))
-      setMessages(convertedMessages)
-      
+        timestamp: msg.timestamp,
+      }));
+      setMessages(convertedMessages);
+
       if (guestData.result) {
-        setActionPlan(guestData.result)
+        setActionPlan(guestData.result);
       }
     } else {
       // Send welcome message
-      sendWelcomeMessage()
+      sendWelcomeMessage();
     }
-  }
+  };
 
   const loadChatHistory = async () => {
     try {
-      const response = await fetch('/api/chat')
-      const data = await response.json()
+      const response = await fetch("/api/chat");
+      const data = await response.json();
 
       if (data.messages && data.messages.length > 0) {
         // Convert from database format
@@ -141,255 +229,574 @@ export default function DashboardPage() {
           id: msg.id || Date.now().toString(),
           role: msg.role,
           content: msg.content || msg.text,
-          timestamp: msg.timestamp || msg.created_at
-        }))
-        setMessages(convertedMessages)
+          timestamp: msg.timestamp || msg.created_at,
+        }));
+        setMessages(convertedMessages);
       } else {
         // Send welcome message
-        sendWelcomeMessage()
+        sendWelcomeMessage();
       }
     } catch (error) {
-      console.error('Error loading chat history:', error)
-      sendWelcomeMessage()
+      console.error("Error loading chat history:", error);
+      sendWelcomeMessage();
     }
-  }
+  };
 
   const loadActionPlan = async () => {
     try {
-      const response = await fetch('/api/action-plan')
-      const data = await response.json()
+      const response = await fetch("/api/action-plan");
+      const data = await response.json();
       if (data.plan) {
-        setActionPlan(data.plan)
+        setActionPlan(data.plan);
       }
     } catch (error) {
-      console.error('Error loading action plan:', error)
+      console.error("Error loading action plan:", error);
     }
-  }
+  };
 
   const sendWelcomeMessage = () => {
     const welcomeMessage: Message = {
       id: Date.now().toString(),
-      role: 'assistant',
+      role: "assistant",
       content: `👋 Hi! I'm **Prochecka**, your diabetes health assistant!\n\nI can help you with:\n\n✨ **General health conversations** about diabetes, nutrition, and wellness\n\n📊 **PIMA Diabetes Risk Assessment** - A quick, scientifically validated test that evaluates your Type 2 diabetes risk. <span class="pima-link" data-action="open-pima-info" style="color: var(--color-primary); text-decoration: underline; cursor: pointer;">Learn more about PIMA</span>\n\n🍽️ **Personalized meal plans** and exercise routines\n\n💡 **Health tips** tailored just for you\n\nWhat would you like to talk about today?`,
-      timestamp: new Date().toISOString()
-    }
-    
-    setMessages([welcomeMessage])
-    
+      timestamp: new Date().toISOString(),
+    };
+
+    setMessages([welcomeMessage]);
+
     if (isGuest) {
-      saveGuestData({ messages: [welcomeMessage] })
+      saveGuestData({ messages: [welcomeMessage] });
     }
-  }
+  };
 
   const saveGuestData = (data: any) => {
-    const existingData = getGuestData() || {}
+    const existingData = getGuestData() || {};
     const updatedData = {
       ...existingData,
       ...data,
-      timestamp: new Date().toISOString()
-    }
-    setGuestData(updatedData)
-  }
+      timestamp: new Date().toISOString(),
+    };
+    setGuestData(updatedData);
+  };
 
   const handleSubmit = async (e?: React.FormEvent) => {
-    e?.preventDefault()
-    if (!input.trim() || loading) return
+    e?.preventDefault();
+    if (!input.trim() || loading) return;
 
-    setLoading(true)
+    setLoading(true);
     const userMessage: Message = {
       id: Date.now().toString(),
-      role: 'user',
+      role: "user",
       content: input.trim(),
-      timestamp: new Date().toISOString()
-    }
+      timestamp: new Date().toISOString(),
+    };
 
-    const newMessages = [...messages, userMessage]
-    setMessages(newMessages)
-    setInput('')
+    const newMessages = [...messages, userMessage];
+    setMessages(newMessages);
+    setInput("");
 
     // Create new abort controller for this request
-    const abortController = new AbortController()
-    abortControllerRef.current = abortController
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
 
     try {
       // Build conversation history for AI
-      const conversationHistory = newMessages.map(msg => ({
+      const conversationHistory = newMessages.map((msg) => ({
         role: msg.role,
-        content: msg.content
-      }))
+        content: msg.content,
+      }));
 
       // Call AI chat endpoint with abort signal
-      const response = await fetch('/api/ai-chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/ai-chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           message: userMessage.content,
-          conversation_history: conversationHistory.slice(0, -1) // Exclude the message we just sent
+          conversation_history: conversationHistory.slice(0, -1), // Exclude the message we just sent
         }),
-        signal: abortController.signal
-      })
+        signal: abortController.signal,
+      });
 
-      const data = await response.json()
+      const data = await response.json();
 
       if (data.error) {
-        throw new Error(data.error)
+        throw new Error(data.error);
       }
 
       // Add AI response
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
-        role: 'assistant',
+        role: "assistant",
         content: data.message,
-        timestamp: new Date().toISOString()
-      }
+        timestamp: new Date().toISOString(),
+      };
 
-      const updatedMessages = [...newMessages, aiMessage]
-      setMessages(updatedMessages)
+      const updatedMessages = [...newMessages, aiMessage];
+      setMessages(updatedMessages);
 
       // Check if this is a PIMA assessment starting
-      const isPimaStart = userMessage.content.toLowerCase().includes('pima') || 
-                          userMessage.content.toLowerCase().includes('assessment') ||
-                          userMessage.content.toLowerCase().includes('diabetes risk')
-      
+      const isPimaStart =
+        userMessage.content.toLowerCase().includes("pima") ||
+        userMessage.content.toLowerCase().includes("assessment") ||
+        userMessage.content.toLowerCase().includes("diabetes risk");
+
       if (isPimaStart && !isInPimaAssessment) {
-        setIsInPimaAssessment(true)
-        setPimaAnswersCount(0)
+        setIsInPimaAssessment(true);
+        setPimaAnswersCount(0);
       }
 
-      // Track PIMA answers for guests (count user answers, not AI responses)
-      if (isGuest && isInPimaAssessment) {
-        // Increment answer count for each user message during assessment
-        const newCount = pimaAnswersCount + 1
-        setPimaAnswersCount(newCount)
+      // Detect which PIMA question is being asked by AI
+      const aiContentLower = aiMessage.content.toLowerCase();
+      if (isInPimaAssessment) {
+        if (
+          aiContentLower.includes("age") &&
+          (aiContentLower.includes("years") || aiContentLower.includes("old"))
+        ) {
+          setLastPimaQuestion("age");
+        }
+      }
 
-        // Check if assessment is complete (8 questions answered)
-        if (newCount >= 8) {
-          // Extract risk score from AI message or use default
-          const riskScore = extractRiskScore(aiMessage.content) || 65
-          
-          // Save result and show prompt
+      // Track PIMA answers (works for both guest and authenticated users)
+      if (isInPimaAssessment && lastPimaQuestion !== "") {
+        // Increment answer count for each user message during assessment
+        const newCount = pimaAnswersCount + 1;
+        setPimaAnswersCount(newCount);
+
+        // Check if user just answered the AGE question (last question)
+        if (lastPimaQuestion === "age") {
+          // For guests: prompt to sign up immediately after age question
+          if (isGuest) {
+            setTimeout(() => {
+              setShowGuestPrompt(true);
+            }, 1000);
+          }
+
+          // Extract risk score from AI message
+          const riskScore = extractRiskScore(aiMessage.content) || 65;
+
+          // Parse AI response for diet and exercise content
+          const parsedContent = parseAIResponse(aiMessage.content);
+
+          // Create or update action plan
           const result = {
             risk_score: riskScore,
             completed_at: new Date().toISOString(),
-            factor: 'Based on your health assessment',
-            plan_message: 'Sign in to view your personalized health plan and track your progress.'
-          }
-          saveGuestData({ messages: updatedMessages, result })
-          setActionPlan(result)
-          
+            factor: parsedContent.factor || "Based on your health assessment",
+            plan_message:
+              parsedContent.planMessage ||
+              "Your personalized health plan is ready.",
+            dietPlan: parsedContent.dietPlan,
+            exercisePlan: parsedContent.exercisePlan,
+            recommendations: parsedContent.recommendations,
+          };
+
+          saveGuestData({ messages: updatedMessages, result });
+          setActionPlan(result);
+
           // Reset assessment state
-          setIsInPimaAssessment(false)
-          
-          // Show sign-in prompt after a brief delay
-          setTimeout(() => {
-            setShowGuestPrompt(true)
-          }, 1500)
+          setIsInPimaAssessment(false);
+          setLastPimaQuestion("");
+        }
+      }
+
+      // Parse diet/exercise plans from any AI response
+      const parsedResponse = parseAIResponse(aiMessage.content);
+      if (parsedResponse.dietPlan || parsedResponse.exercisePlan) {
+        setActionPlan((prev: any) => ({
+          ...prev,
+          dietPlan: parsedResponse.dietPlan || prev?.dietPlan,
+          exercisePlan: parsedResponse.exercisePlan || prev?.exercisePlan,
+          recommendations:
+            parsedResponse.recommendations || prev?.recommendations,
+        }));
+
+        // Parse and set custom meals/exercises from AI response
+        if (parsedResponse.meals && parsedResponse.meals.length > 0) {
+          setCustomDietPlan({ meals: parsedResponse.meals });
+          // Auto-open diet modal after 1 second
+          setTimeout(() => setShowDietModal(true), 1000);
+        }
+        if (parsedResponse.exercises && parsedResponse.exercises.length > 0) {
+          setCustomExercisePlan({ exercises: parsedResponse.exercises });
+          // Auto-open exercise modal after 1 second
+          setTimeout(() => setShowExerciseModal(true), 1000);
         }
       }
 
       // Save to storage
       if (isGuest) {
-        saveGuestData({ messages: updatedMessages })
+        saveGuestData({ messages: updatedMessages });
       }
-
     } catch (error: any) {
       // Handle abort specifically
-      if (error.name === 'AbortError' || abortController.signal.aborted) {
-        console.log('Request was aborted by user')
+      if (error.name === "AbortError" || abortController.signal.aborted) {
+        console.log("Request was aborted by user");
         // Don't show error message for user-initiated stops
       } else {
-        console.error('Chat error:', error)
-        toast.error(error.message || 'Failed to send message')
-        
+        console.error("Chat error:", error);
+        toast.error(error.message || "Failed to send message");
+
         // Add error message
         const errorMessage: Message = {
           id: (Date.now() + 1).toString(),
-          role: 'assistant',
-          content: "Sorry, I encountered an error. Please make sure you've set up your OPENROUTER_API_KEY in the .env file. Check the console for more details.",
-          timestamp: new Date().toISOString()
-        }
-        setMessages([...newMessages, errorMessage])
+          role: "assistant",
+          content:
+            "Sorry, I encountered an error. Please make sure you've set up your OPENROUTER_API_KEY in the .env file. Check the console for more details.",
+          timestamp: new Date().toISOString(),
+        };
+        setMessages([...newMessages, errorMessage]);
       }
     } finally {
-      setLoading(false)
-      abortControllerRef.current = null
+      setLoading(false);
+      abortControllerRef.current = null;
     }
-  }
+  };
 
   const handleStop = () => {
     if (abortControllerRef.current) {
-      abortControllerRef.current.abort()
-      setLoading(false)
+      abortControllerRef.current.abort();
+      setLoading(false);
     }
-  }
+  };
 
   const handleChatSubmit = () => {
-    handleSubmit()
-  }
+    handleSubmit();
+  };
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut()
-    router.push('/auth/sign-in')
-  }
+    await supabase.auth.signOut();
+    router.push("/auth/sign-in");
+  };
 
   const handleResetChat = async () => {
-    if (!confirm('Are you sure you want to start a new conversation? This will clear your chat history.')) {
-      return
+    if (
+      !confirm(
+        "Are you sure you want to start a new conversation? This will clear your chat history."
+      )
+    ) {
+      return;
     }
 
     if (!isGuest) {
-      await fetch('/api/chat', { method: 'DELETE' })
+      await fetch("/api/chat", { method: "DELETE" });
     }
-    
-    setMessages([])
-    
+
+    setMessages([]);
+
     if (isGuest) {
-      saveGuestData({ messages: [], inputs: {}, result: undefined })
+      saveGuestData({ messages: [], inputs: {}, result: undefined });
     }
-    
-    sendWelcomeMessage()
-  }
+
+    sendWelcomeMessage();
+  };
 
   const startPimaAssessment = () => {
-    const pimaMessage = "I want to start the PIMA diabetes risk assessment"
-    setInput(pimaMessage)
-    setIsInPimaAssessment(true)
-    setPimaAnswersCount(0)
+    const pimaMessage = "I want to start the PIMA diabetes risk assessment";
+    setInput(pimaMessage);
+    setIsInPimaAssessment(true);
+    setPimaAnswersCount(0);
+    setLastPimaQuestion("");
     // Simulate user clicking submit
     setTimeout(() => {
-      handleSubmit({ preventDefault: () => {} } as React.FormEvent)
-    }, 100)
-  }
+      handleSubmit({ preventDefault: () => {} } as React.FormEvent);
+    }, 100);
+  };
 
   const extractRiskScore = (message: string): number | null => {
     // Try to extract risk score from AI message
-    const scoreMatch = message.match(/risk score[:\s]+([0-9]+)/i)
+    const scoreMatch = message.match(/risk score[:\s]+([0-9]+)/i);
     if (scoreMatch) {
-      return parseInt(scoreMatch[1])
+      return parseInt(scoreMatch[1]);
     }
     // Look for percentage
-    const percentMatch = message.match(/([0-9]+)%/)
+    const percentMatch = message.match(/([0-9]+)%/);
     if (percentMatch) {
-      return parseInt(percentMatch[1])
+      return parseInt(percentMatch[1]);
     }
-    return null
-  }
+    return null;
+  };
+
+  const parseAIResponse = (message: string) => {
+    const result: any = {
+      factor: null,
+      planMessage: null,
+      dietPlan: null,
+      exercisePlan: null,
+      recommendations: [],
+      meals: [],
+      exercises: [],
+    };
+
+    // Extract diet plan
+    const dietMatch = message.match(
+      /diet plan[:\s]+([\s\S]*?)(?=exercise|routine|lifestyle|$)/i
+    );
+    if (dietMatch) {
+      result.dietPlan = dietMatch[1].trim();
+    }
+
+    // Extract exercise/routine plan
+    const exerciseMatch = message.match(
+      /exercise[\s\S]*?(?:plan|routine)[:\s]+([\s\S]*?)(?=lifestyle|recommendations|$)/i
+    );
+    if (exerciseMatch) {
+      result.exercisePlan = exerciseMatch[1].trim();
+    }
+
+    // Parse meal structure from text
+    const mealKeywords = [
+      "breakfast",
+      "lunch",
+      "dinner",
+      "snack",
+      "morning",
+      "afternoon",
+      "evening",
+    ];
+    const stopKeywords = [
+      "tip",
+      "note",
+      "recommendation",
+      "important",
+      "remember",
+      "advice",
+      "general",
+      "summary",
+      "conclusion",
+      "daily",
+      "hydration",
+      "additional tips",
+    ];
+    const lines = message.split("\n");
+    let currentMeal: any = null;
+    let inMealSection = false;
+
+    lines.forEach((line, index) => {
+      const lowerLine = line.toLowerCase();
+
+      // Check if we hit a stop keyword section (tips, recommendations, etc.)
+      const hitStopKeyword = stopKeywords.some((keyword) => {
+        // Match section headers like "Tips:", "## Recommendations", "**Important Notes**"
+        const sectionHeaderPattern = new RegExp(
+          `^[#\*\s]*${keyword}[s]?[:\*\s]`,
+          "i"
+        );
+        return sectionHeaderPattern.test(lowerLine);
+      });
+
+      if (hitStopKeyword && inMealSection) {
+        // Stop parsing meals when we hit a tips/recommendations section
+        if (currentMeal) {
+          result.meals.push(currentMeal);
+          currentMeal = null;
+        }
+        inMealSection = false;
+        return;
+      }
+
+      // Check if line is a meal header
+      const mealType = mealKeywords.find((keyword) =>
+        lowerLine.includes(keyword)
+      );
+      if (mealType && (lowerLine.includes(":") || lowerLine.includes("-"))) {
+        if (currentMeal) {
+          result.meals.push(currentMeal);
+        }
+
+        inMealSection = true;
+
+        // Extract time if present
+        const timeMatch = line.match(/(\d{1,2}:\d{2}\s*(?:AM|PM|am|pm)?)/i);
+        const time = timeMatch ? timeMatch[1] : getDefaultMealTime(mealType);
+
+        // Extract total calories from header if present (e.g., "Breakfast (280 kcal):")
+        const headerCalMatch = line.match(
+          /[\(\s](\d+)\s*(?:kcal|cal|calories)/i
+        );
+        const headerCalories = headerCalMatch ? parseInt(headerCalMatch[1]) : 0;
+
+        currentMeal = {
+          time,
+          name: mealType.charAt(0).toUpperCase() + mealType.slice(1),
+          items: [],
+          calories: headerCalories,
+          icon: getMealIcon(mealType),
+        };
+      } else if (currentMeal && inMealSection && line.trim()) {
+        // Extract meal items (lines starting with -, *, •, or numbers)
+        const itemMatch = line.match(/^[\s\-\*•\d.]+(.+)$/i);
+        if (itemMatch) {
+          let item = itemMatch[1].trim();
+
+          // Extract calories from the item line (multiple formats)
+          // Formats: (280 kcal), 280 calories, (280 cal), - 280 kcal
+          const calMatch = item.match(
+            /[\(\-\s](\d+)\s*(?:kcal|cal|calories)[\)\s]/i
+          );
+          if (calMatch) {
+            const calories = parseInt(calMatch[1]);
+            currentMeal.calories += calories;
+            // Remove calorie info from item text for cleaner display
+            item = item
+              .replace(/[\(\-\s]\d+\s*(?:kcal|cal|calories)[\)\s]/gi, "")
+              .trim();
+          }
+
+          if (item && item.length > 0) {
+            currentMeal.items.push(item);
+          }
+        }
+      }
+    });
+
+    if (currentMeal && inMealSection) {
+      result.meals.push(currentMeal);
+    }
+
+    // Parse exercise structure from text
+    const exerciseKeywords = [
+      "walk",
+      "jog",
+      "run",
+      "squat",
+      "push",
+      "plank",
+      "yoga",
+      "stretch",
+      "cycle",
+      "swim",
+      "dance",
+    ];
+    let inExerciseSection = false;
+
+    lines.forEach((line, index) => {
+      const lowerLine = line.toLowerCase();
+
+      // Check if we hit a stop keyword section
+      const hitStopKeyword = stopKeywords.some((keyword) => {
+        const sectionHeaderPattern = new RegExp(
+          `^[#\*\s]*${keyword}[s]?[:\*\s]`,
+          "i"
+        );
+        return sectionHeaderPattern.test(lowerLine);
+      });
+
+      if (hitStopKeyword && inExerciseSection) {
+        // Stop parsing exercises when we hit a tips/recommendations section
+        inExerciseSection = false;
+        return;
+      }
+
+      // Check if line mentions an exercise
+      const exerciseType = exerciseKeywords.find((keyword) =>
+        lowerLine.includes(keyword)
+      );
+      if (
+        exerciseType &&
+        (lowerLine.includes("minute") ||
+          lowerLine.includes("rep") ||
+          lowerLine.includes("set"))
+      ) {
+        inExerciseSection = true;
+
+        const durationMatch = line.match(/(\d+)\s*(?:minute|min|mins)/i);
+        const repsMatch = line.match(/(\d+)\s*(?:rep|reps|repetition)/i);
+        const setsMatch = line.match(/(\d+)\s*(?:set|sets)/i);
+
+        // Extract calories with multiple format support
+        // Formats: (burns 150 kcal), 150 calories, (150 kcal), burns 150 cal
+        let calories = 100; // default
+        const calMatch = line.match(
+          /(?:burns?\s*)?(\d+)\s*(?:kcal|cal|calories)/i
+        );
+        if (calMatch) {
+          calories = parseInt(calMatch[1]);
+        }
+
+        // Clean up exercise name by removing calorie and duration info
+        let exerciseName =
+          line.split(/[-\*•\d.]/)[1]?.trim() || `${exerciseType} Exercise`;
+        exerciseName = exerciseName
+          .replace(/(?:burns?\s*)?\d+\s*(?:kcal|cal|calories)/gi, "")
+          .trim();
+        exerciseName = exerciseName
+          .replace(/\d+\s*(?:minute|min|mins)/gi, "")
+          .trim();
+        exerciseName = exerciseName.replace(/[\(\)]/g, "").trim();
+
+        result.exercises.push({
+          id: (result.exercises.length + 1).toString(),
+          name: exerciseName,
+          duration: durationMatch
+            ? `${durationMatch[1]} minutes`
+            : "15 minutes",
+          sets: setsMatch ? `${setsMatch[1]} sets` : undefined,
+          reps: repsMatch ? `${repsMatch[1]} reps` : undefined,
+          calories: calories,
+          completed: false,
+        });
+      }
+    });
+
+    // Extract recommendations
+    const recsMatch = message.match(/recommendations?[:\s]+([\s\S]*?)$/i);
+    if (recsMatch) {
+      const recs = recsMatch[1]
+        .split("\n")
+        .filter((line: string) => line.trim().length > 0);
+      result.recommendations = recs.map((rec: string) => rec.trim());
+    }
+
+    // Extract risk factor
+    const factorMatch = message.match(
+      /(?:risk factor|main concern|primary risk)[:\s]+([^\n]+)/i
+    );
+    if (factorMatch) {
+      result.factor = factorMatch[1].trim();
+    }
+
+    return result;
+  };
+
+  const getDefaultMealTime = (mealType: string) => {
+    const times: any = {
+      breakfast: "7:00 AM",
+      morning: "10:00 AM",
+      lunch: "1:00 PM",
+      afternoon: "4:00 PM",
+      dinner: "7:00 PM",
+      evening: "9:00 PM",
+      snack: "3:00 PM",
+    };
+    return times[mealType.toLowerCase()] || "12:00 PM";
+  };
+
+  const getMealIcon = (mealType: string) => {
+    // Return icon component based on meal type for bot-suggested meals
+    const type = mealType.toLowerCase();
+    if (type.includes('breakfast')) return <Coffee className="w-5 h-5" />;
+    if (type.includes('morning') || type.includes('snack')) return <Sun className="w-5 h-5" />;
+    if (type.includes('lunch')) return <Utensils className="w-5 h-5" />;
+    if (type.includes('afternoon')) return <Clock className="w-5 h-5" />;
+    if (type.includes('dinner') || type.includes('evening')) return <Moon className="w-5 h-5" />;
+    return <Utensils className="w-5 h-5" />; // default icon
+  };
 
   // Format markdown-style text for display
   const formatMessageContent = (content: string) => {
     // Split by lines to preserve structure
-    const lines = content.split('\n')
-    
+    const lines = content.split("\n");
+
     return lines.map((line, lineIndex) => {
       // Check if line contains the PIMA link
       if (line.includes('data-action="open-pima-info"')) {
         // Parse and render the link as a clickable element
-        const parts = line.split(/<span class="pima-link"[^>]*>|<\/span>/)
+        const parts = line.split(/<span class="pima-link"[^>]*>|<\/span>/);
         return (
           <div key={lineIndex}>
             {parts[0]}
             {parts[1] && (
-              <span 
+              <span
                 className="text-primary underline cursor-pointer hover:text-primary/80 transition-colors"
                 onClick={() => setShowPimaInfo(true)}
               >
@@ -398,53 +805,66 @@ export default function DashboardPage() {
             )}
             {parts[2]}
           </div>
-        )
+        );
       }
 
       // Process each line for inline formatting
-      const parts: React.ReactNode[] = []
-      let currentIndex = 0
-      
+      const parts: React.ReactNode[] = [];
+      let currentIndex = 0;
+
       // Match **bold**, *italic*, `code`, and bullet points
-      const regex = /(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`|^[•\-\*]\s)/g
-      let match
-      
+      const regex = /(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`|^[•\-\*]\s)/g;
+      let match;
+
       while ((match = regex.exec(line)) !== null) {
         // Add text before match
         if (match.index > currentIndex) {
-          parts.push(line.substring(currentIndex, match.index))
+          parts.push(line.substring(currentIndex, match.index));
         }
-        
-        const matched = match[0]
-        if (matched.startsWith('**') && matched.endsWith('**')) {
+
+        const matched = match[0];
+        if (matched.startsWith("**") && matched.endsWith("**")) {
           // Bold text
-          parts.push(<strong key={`${lineIndex}-${match.index}`}>{matched.slice(2, -2)}</strong>)
-        } else if (matched.startsWith('*') && matched.endsWith('*') && !matched.startsWith('**')) {
+          parts.push(
+            <strong key={`${lineIndex}-${match.index}`}>
+              {matched.slice(2, -2)}
+            </strong>
+          );
+        } else if (
+          matched.startsWith("*") &&
+          matched.endsWith("*") &&
+          !matched.startsWith("**")
+        ) {
           // Italic text
-          parts.push(<em key={`${lineIndex}-${match.index}`}>{matched.slice(1, -1)}</em>)
-        } else if (matched.startsWith('`') && matched.endsWith('`')) {
+          parts.push(
+            <em key={`${lineIndex}-${match.index}`}>{matched.slice(1, -1)}</em>
+          );
+        } else if (matched.startsWith("`") && matched.endsWith("`")) {
           // Code text
-          parts.push(<code key={`${lineIndex}-${match.index}`} className="bg-muted px-1 rounded text-sm">{matched.slice(1, -1)}</code>)
+          parts.push(
+            <code
+              key={`${lineIndex}-${match.index}`}
+              className="bg-muted px-1 rounded text-sm"
+            >
+              {matched.slice(1, -1)}
+            </code>
+          );
         } else if (matched.match(/^[•\-\*]\s/)) {
           // Bullet point - already captured
-          parts.push(matched)
+          parts.push(matched);
         }
-        
-        currentIndex = match.index + matched.length
+
+        currentIndex = match.index + matched.length;
       }
-      
+
       // Add remaining text
       if (currentIndex < line.length) {
-        parts.push(line.substring(currentIndex))
+        parts.push(line.substring(currentIndex));
       }
-      
-      return (
-        <div key={lineIndex}>
-          {parts.length > 0 ? parts : line}
-        </div>
-      )
-    })
-  }
+
+      return <div key={lineIndex}>{parts.length > 0 ? parts : line}</div>;
+    });
+  };
 
   return (
     <div className="relative flex flex-col lg:flex-row h-screen overflow-hidden bg-background">
@@ -464,6 +884,9 @@ export default function DashboardPage() {
           onSignOut={handleSignOut}
           onResetChat={handleResetChat}
           onViewPlan={() => setShowActionPlan(true)}
+          onOpenDiet={() => setShowDietModal(true)}
+          onOpenExercise={() => setShowExerciseModal(true)}
+          onOpenRiskAlert={() => setShowComplicationModal(true)}
         />
 
         {/* Messages */}
@@ -560,10 +983,13 @@ export default function DashboardPage() {
       {showActionPlan && actionPlan && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-md">
           <div className="backdrop-blur-xl bg-card/90 border border-border/50 w-full sm:w-[90%] sm:max-w-4xl sm:rounded-t-3xl rounded-t-3xl sm:rounded-b-3xl max-h-[85vh] sm:max-h-[85vh] overflow-y-auto shadow-2xl animate-in slide-in-from-bottom sm:zoom-in-95 duration-300 p-6">
-            <EnhancedActionPlan 
+            <EnhancedActionPlan
               plan={actionPlan}
               onUpdate={loadActionPlan}
               onClose={() => setShowActionPlan(false)}
+              onOpenDiet={() => setShowDietModal(true)}
+              onOpenExercise={() => setShowExerciseModal(true)}
+              onOpenRiskAlert={() => setShowComplicationModal(true)}
             />
           </div>
         </div>
@@ -577,6 +1003,44 @@ export default function DashboardPage() {
         />
       )}
 
+      {/* Standalone Diet Modal */}
+      <Dialog open={showDietModal} onOpenChange={setShowDietModal}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+          <DietTimetable
+            meals={customDietPlan?.meals}
+            onClose={() => setShowDietModal(false)}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Standalone Exercise Modal */}
+      <Dialog open={showExerciseModal} onOpenChange={setShowExerciseModal}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+          <ExerciseRoutine
+            exercises={customExercisePlan?.exercises}
+            onClose={() => setShowExerciseModal(false)}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Standalone Complication Prediction Modal */}
+      <Dialog
+        open={showComplicationModal}
+        onOpenChange={setShowComplicationModal}
+      >
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+          <ComplicationPrediction
+            metrics={{
+              bloodSugar: 280,
+              medicationAdherence: 85,
+              activityLevel: "moderate",
+              symptoms: [],
+            }}
+            onClose={() => setShowComplicationModal(false)}
+          />
+        </DialogContent>
+      </Dialog>
+
       {/* PIMA Information Dialog */}
       <Dialog open={showPimaInfo} onOpenChange={setShowPimaInfo}>
         <DialogContent>
@@ -586,37 +1050,47 @@ export default function DashboardPage() {
               Understanding your diabetes risk assessment
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-4 text-sm sm:text-base">
             <p className="text-foreground leading-relaxed">
-              The <strong>PIMA Diabetes Test</strong> is a scientifically validated assessment tool developed using data from the Pima Indian population, who have one of the highest rates of Type 2 diabetes in the world. This makes it an exceptionally accurate predictor of diabetes risk.
+              The <strong>PIMA Diabetes Test</strong> is a scientifically
+              validated assessment tool developed using data from the Pima
+              Indian population, who have one of the highest rates of Type 2
+              diabetes in the world. This makes it an exceptionally accurate
+              predictor of diabetes risk.
             </p>
 
             <div>
-              <h4 className="font-semibold text-foreground mb-2">The Test Evaluates 8 Key Health Metrics:</h4>
+              <h4 className="font-semibold text-foreground mb-2">
+                The Test Evaluates 8 Key Health Metrics:
+              </h4>
               <div className="space-y-2">
                 <div className="flex gap-2">
                   <span className="text-primary">🤰</span>
                   <div>
-                    <strong>Pregnancies:</strong> Number of times pregnant (women only)
+                    <strong>Pregnancies:</strong> Number of times pregnant
+                    (women only)
                   </div>
                 </div>
                 <div className="flex gap-2">
                   <span className="text-primary">🩸</span>
                   <div>
-                    <strong>Glucose Level:</strong> Plasma glucose concentration (mg/dL)
+                    <strong>Glucose Level:</strong> Plasma glucose concentration
+                    (mg/dL)
                   </div>
                 </div>
                 <div className="flex gap-2">
                   <span className="text-primary">💓</span>
                   <div>
-                    <strong>Blood Pressure:</strong> Diastolic blood pressure (mm Hg)
+                    <strong>Blood Pressure:</strong> Diastolic blood pressure
+                    (mm Hg)
                   </div>
                 </div>
                 <div className="flex gap-2">
                   <span className="text-primary">📏</span>
                   <div>
-                    <strong>Skin Thickness:</strong> Triceps skin fold thickness (mm)
+                    <strong>Skin Thickness:</strong> Triceps skin fold thickness
+                    (mm)
                   </div>
                 </div>
                 <div className="flex gap-2">
@@ -628,13 +1102,15 @@ export default function DashboardPage() {
                 <div className="flex gap-2">
                   <span className="text-primary">⚖️</span>
                   <div>
-                    <strong>BMI:</strong> Body mass index (weight in kg/(height in m)²)
+                    <strong>BMI:</strong> Body mass index (weight in kg/(height
+                    in m)²)
                   </div>
                 </div>
                 <div className="flex gap-2">
                   <span className="text-primary">🧬</span>
                   <div>
-                    <strong>Diabetes Pedigree:</strong> Family history function score
+                    <strong>Diabetes Pedigree:</strong> Family history function
+                    score
                   </div>
                 </div>
                 <div className="flex gap-2">
@@ -647,7 +1123,9 @@ export default function DashboardPage() {
             </div>
 
             <div className="bg-primary/10 rounded-lg p-4 border border-primary/20">
-              <h4 className="font-semibold text-foreground mb-2">✨ What You'll Get:</h4>
+              <h4 className="font-semibold text-foreground mb-2">
+                ✨ What You'll Get:
+              </h4>
               <ul className="space-y-1 text-sm">
                 <li>• Personalized diabetes risk score (0-100)</li>
                 <li>• Identification of your primary risk factors</li>
@@ -658,13 +1136,16 @@ export default function DashboardPage() {
             </div>
 
             <p className="text-muted-foreground text-sm italic">
-              <strong>Note:</strong> The assessment takes just 3-5 minutes. Don't worry if you don't know exact values - estimates work fine! This is a screening tool, not a diagnosis. Always consult with healthcare professionals for medical advice.
+              <strong>Note:</strong> The assessment takes just 3-5 minutes.
+              Don't worry if you don't know exact values - estimates work fine!
+              This is a screening tool, not a diagnosis. Always consult with
+              healthcare professionals for medical advice.
             </p>
 
-            <Button 
+            <Button
               onClick={() => {
-                setShowPimaInfo(false)
-                startPimaAssessment()
+                setShowPimaInfo(false);
+                startPimaAssessment();
               }}
               className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
             >
@@ -673,6 +1154,9 @@ export default function DashboardPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Emergency Button */}
+      <EmergencyButton />
     </div>
-  )
+  );
 }

@@ -104,7 +104,7 @@ export default function ProfileDropdown({ user, onSignOut }: ProfileDropdownProp
           {/* Profile Info */}
           <div className="px-4 py-3 border-b border-gray-100">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-semibold shadow-md">
+              <div className="w-12 h-12 rounded-full bg-linear-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-semibold shadow-md">
                 {getInitials()}
               </div>
               <div className="flex-1 min-w-0">
@@ -119,7 +119,7 @@ export default function ProfileDropdown({ user, onSignOut }: ProfileDropdownProp
           {/* Menu Items */}
           <div className="py-1">
             <Link
-              href="/auth/setup-username"
+              href="/profile"
               onClick={() => setIsOpen(false)}
               className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
             >
@@ -132,7 +132,26 @@ export default function ProfileDropdown({ user, onSignOut }: ProfileDropdownProp
                 />
               </svg>
               <div>
-                <div className="font-medium">Edit Profile</div>
+                <div className="font-medium">My Profile</div>
+                <div className="text-xs text-gray-500">Medical info & settings</div>
+              </div>
+            </Link>
+
+            <Link
+              href="/auth/setup-username"
+              onClick={() => setIsOpen(false)}
+              className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+            >
+              <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                />
+              </svg>
+              <div>
+                <div className="font-medium">Edit Username</div>
                 <div className="text-xs text-gray-500">Update username & display name</div>
               </div>
             </Link>

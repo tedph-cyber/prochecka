@@ -12,14 +12,26 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { message, conversation_history } = body;
 
+    // Fetch username if user is authenticated
+    let username: string | undefined;
+    if (user) {
+      const { data: profile } = await supabase
+        .from('user_profiles')
+        .select('username, display_name')
+        .eq('id', user.id)
+        .single() as { data: { username: string; display_name: string | null } | null };
+      
+      username = profile?.display_name || profile?.username;
+    }
+
     // Build message history
     const messages = [
       ...conversation_history,
       { role: "user", content: message },
     ];
 
-    // Get AI response
-    const aiResponse = await chatWithAI(messages, user?.id);
+    // Get AI response with username context
+    const aiResponse = await chatWithAI(messages, user?.id, username);
 
     if (aiResponse.type === "error") {
       return NextResponse.json(

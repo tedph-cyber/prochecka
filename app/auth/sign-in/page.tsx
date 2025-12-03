@@ -50,6 +50,16 @@ export default function SignInPage() {
     }
   }
 
+  const handleForgotPassword = async (email: string) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${location.origin}/auth/callback?next=/auth/reset-password`,
+    })
+
+    if (error) {
+      throw new Error(error.message)
+    }
+  }
+
   return (
     <AuthComponent 
       mode="signin"
@@ -57,6 +67,7 @@ export default function SignInPage() {
       brandName="Prochecka"
       onSubmit={handleSignIn}
       onGoogleAuth={handleGoogleSignIn}
+      onForgotPassword={handleForgotPassword}
     />
   )
 }

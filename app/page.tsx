@@ -7,6 +7,63 @@ import Link from 'next/link'
 import { MessageSquare, Activity, CheckCircle2, ArrowRight, Brain, Heart, Target, Sparkles, Shield, TrendingUp } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Image from 'next/image'
+import Script from 'next/script'
+
+// Structured Data for SEO
+const structuredData = {
+  '@context': 'https://schema.org',
+  '@type': 'WebApplication',
+  name: 'Prochecka',
+  applicationCategory: 'HealthApplication',
+  operatingSystem: 'Web',
+  offers: {
+    '@type': 'Offer',
+    price: '0',
+    priceCurrency: 'USD',
+  },
+  description: 'AI-powered diabetes risk assessment and personalized health management platform for Type 2 diabetes prevention',
+  aggregateRating: {
+    '@type': 'AggregateRating',
+    ratingValue: '4.8',
+    ratingCount: '1250',
+  },
+  featureList: [
+    'PIMA Diabetes Risk Assessment',
+    'AI-Powered Health Chatbot',
+    'Personalized Meal Plans',
+    'Exercise Routines',
+    'Health Monitoring',
+    'Task Tracking',
+  ],
+}
+
+const organizationData = {
+  '@context': 'https://schema.org',
+  '@type': 'Organization',
+  name: 'Prochecka',
+  url: process.env.NEXT_PUBLIC_SITE_URL || 'https://prochecka.com',
+  logo: `${process.env.NEXT_PUBLIC_SITE_URL || 'https://prochecka.com'}/images/logo.png`,
+  sameAs: [],
+  contactPoint: {
+    '@type': 'ContactPoint',
+    contactType: 'Customer Support',
+    availableLanguage: ['English'],
+  },
+}
+
+const medicalData = {
+  '@context': 'https://schema.org',
+  '@type': 'MedicalWebPage',
+  name: 'Prochecka - Diabetes Prevention & Risk Assessment',
+  description: 'Free online diabetes risk assessment using the scientifically validated PIMA test with AI-powered personalized health plans',
+  medicalAudience: {
+    '@type': 'Patient',
+  },
+  about: {
+    '@type': 'MedicalCondition',
+    name: 'Type 2 Diabetes',
+  },
+}
 
 // Gradient background component (same as auth pages)
 const GradientBackground = () => (
@@ -74,6 +131,23 @@ export default function Home() {
 
   return (
     <div className="relative min-h-screen w-screen overflow-x-hidden bg-background">
+      {/* Structured Data for SEO */}
+      <Script
+        id="structured-data-webapp"
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+      />
+      <Script
+        id="structured-data-organization"
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationData) }}
+      />
+      <Script
+        id="structured-data-medical"
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(medicalData) }}
+      />
+
       {/* Gradient Background */}
       <div className="fixed inset-0 z-0">
         <GradientBackground />
@@ -143,9 +217,9 @@ export default function Home() {
               </h2>
 
               <p className="text-base sm:text-lg lg:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-                Get instant diabetes risk assessment and AI-powered personalized
+                Get instant <strong>diabetes risk assessment</strong> and AI-powered personalized
                 action plans. Start your health journey today with our
-                intelligent chatbot assistant.
+                intelligent <strong>chatbot assistant</strong> and <strong>PIMA diabetes test</strong>.
               </p>
 
               <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 pt-4">

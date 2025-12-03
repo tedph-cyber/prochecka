@@ -457,6 +457,7 @@ interface AuthComponentProps {
   brandName?: string;
   onSubmit?: (email: string, password: string) => Promise<void>;
   onGoogleAuth?: () => Promise<void>;
+  onForgotPassword?: (email: string) => Promise<void>;
 }
 
 export const AuthComponent = ({
@@ -465,17 +466,19 @@ export const AuthComponent = ({
   brandName = "Prochecka",
   onSubmit,
   onGoogleAuth,
+  onForgotPassword,
 }: AuthComponentProps) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [authStep, setAuthStep] = useState("email");
   const [modalStatus, setModalStatus] = useState<
     "closed" | "loading" | "error" | "success"
   >("closed");
   const [modalErrorMessage, setModalErrorMessage] = useState("");
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const confettiRef = useRef<ConfettiRef>(null);
 
   const modalSteps = getModalSteps(mode);
@@ -577,24 +580,89 @@ export const AuthComponent = ({
       setConfirmPassword("");
     } else if (authStep === "password") setAuthStep("email");
   };
-
   const closeModal = () => {
     setModalStatus("closed");
     setModalErrorMessage("");
   };
 
-  useEffect(() => {
-    if (authStep === "password")
-      setTimeout(() => passwordInputRef.current?.focus(), 500);
-    else if (authStep === "confirmPassword")
-      setTimeout(() => confirmPasswordInputRef.current?.focus(), 500);
-  }, [authStep]);
-
-  useEffect(() => {
-    if (modalStatus === "success") {
-      fireSideCanons();
+  const handleForgotPassword = async () => {
+    if (!email || !isEmailValid) {
+      setModalErrorMessage("Please enter a valid email address first");
+      setModalStatus("error");
+      return;
     }
-  }, [modalStatus]);
+
+    setShowForgotPassword(false);
+    setModalStatus("loading");
+
+    if (onForgotPassword) {
+      try {
+        await onForgotPassword(email);
+        setModalStatus("success");
+      } catch (error) {
+        setModalErrorMessage(
+          error instanceof Error ? error.message : "Failed to send reset email"
+        );
+        setModalStatus("error");
+      }
+    } else {
+      // Simulate sending reset email
+      setTimeout(() => {
+        setModalStatus("success");
+      }, 2000);
+    }
+  };
+
+  const ForgotPasswordModal = () => (
+    <AnimatePresence>
+      {showForgotPassword && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+          onClick={() => setShowForgotPassword(false)}
+        >
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.9, opacity: 0 }}
+            onClick={(e) => e.stopPropagation()}
+            className="relative bg-card/80 border-4 border-border rounded-2xl p-8 w-full max-w-sm flex flex-col items-center gap-4 mx-2"
+          >
+            <button
+              onClick={() => setShowForgotPassword(false)}
+              className="absolute top-2 right-2 p-1 text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <Mail className="w-12 h-12 text-primary" />
+            <h3 className="text-xl font-bold text-foreground">Reset Password</h3>
+            <p className="text-sm text-muted-foreground text-center">
+              We'll send a password reset link to <strong className="text-foreground">{email}</strong>
+            </p>
+            <div className="flex gap-3 w-full mt-2">
+              <GlassButton
+                onClick={() => setShowForgotPassword(false)}
+                size="sm"
+                className="flex-1"
+                contentClassName="text-muted-foreground"
+              >
+                Cancel
+              </GlassButton>
+              <GlassButton
+                onClick={handleForgotPassword}
+                size="sm"
+                className="flex-1"
+              >
+                Send Link
+              </GlassButton>
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
 
   const Modal = () => (
     <AnimatePresence>
@@ -646,7 +714,9 @@ export const AuthComponent = ({
               <div className="flex flex-col items-center gap-4">
                 {modalSteps[modalSteps.length - 1].icon}
                 <p className="text-lg font-medium text-foreground">
-                  {modalSteps[modalSteps.length - 1].message}
+                  {onForgotPassword && !showForgotPassword 
+                    ? "Password reset email sent!" 
+                    : modalSteps[modalSteps.length - 1].message}
                 </p>
               </div>
             )}
@@ -671,6 +741,7 @@ export const AuthComponent = ({
         manualstart
         className="fixed top-0 left-0 w-full h-full pointer-events-none z-999"
       />
+      <ForgotPasswordModal />
       <Modal />
 
       <div
@@ -767,7 +838,7 @@ export const AuthComponent = ({
                 <BlurFade delay={0.25 * 1}>
                   <p className="text-sm font-medium text-muted-foreground">
                     {mode === "signup"
-                      ? "Your password must be at least 6 characters long."
+                      ? "Your password must be at least 8 characters long with a mix of letters, numbers, and special characters."
                       : "Sign in to access your dashboard"}
                   </p>
                 </BlurFade>
@@ -893,7 +964,7 @@ export const AuthComponent = ({
                               </motion.div>
                             )}
                           </AnimatePresence>
-                          <div className="glass-input-wrap w-full">
+                          <div className="glass-input-wrap w-full py-2">
                             <div className="glass-input">
                               <span className="glass-input-text-area"></span>
                               <div className="relative z-10 shrink-0 flex items-center justify-center w-10 pl-2">
@@ -944,14 +1015,51 @@ export const AuthComponent = ({
                             </div>
                           </div>
                         </div>
+                        
+                        {/* Password requirements hint for sign-in */}
+                        {(mode === "signin" || mode === "signup") && password.length > 0 && !isPasswordValid && (
+                          <BlurFade inView delay={0.1}>
+                            <div className="mt-2 p-3 rounded-lg bg-muted/50 border border-border">
+                              <p className="text-xs font-semibold text-muted-foreground mb-1.5">
+                                Password requirements:
+                              </p>
+                              <div className="space-y-0.5 text-xs">
+                                <div className={hasMinLength ? 'text-green-500' : 'text-muted-foreground'}>
+                                  {hasMinLength ? '✓' : '○'} At least 8 characters
+                                </div>
+                                <div className={hasUpperCase ? 'text-green-500' : 'text-muted-foreground'}>
+                                  {hasUpperCase ? '✓' : '○'} One uppercase letter
+                                </div>
+                                <div className={hasDigit ? 'text-green-500' : 'text-muted-foreground'}>
+                                  {hasDigit ? '✓' : '○'} One number
+                                </div>
+                                <div className={hasSymbol ? 'text-green-500' : 'text-muted-foreground'}>
+                                  {hasSymbol ? '✓' : '○'} One special character
+                                </div>
+                              </div>
+                            </div>
+                          </BlurFade>
+                        )}
+                        
                         <BlurFade inView delay={0.2}>
-                          <button
-                            type="button"
-                            onClick={handleGoBack}
-                            className="mt-4 flex items-center gap-2 text-sm text-foreground/70 hover:text-foreground transition-colors"
-                          >
-                            <ArrowLeft className="w-4 h-4" /> Go back
-                          </button>
+                          <div className="mt-4 flex items-center justify-between w-full">
+                            <button
+                              type="button"
+                              onClick={handleGoBack}
+                              className="flex items-center gap-2 text-sm text-foreground/70 hover:text-foreground transition-colors"
+                            >
+                              <ArrowLeft className="w-4 h-4" /> Go back
+                            </button>
+                            {mode === "signin" && (
+                              <button
+                                type="button"
+                                onClick={() => setShowForgotPassword(true)}
+                                className="text-sm text-primary font-semibold hover:underline transition-colors"
+                              >
+                                Forgot password?
+                              </button>
+                            )}
+                          </div>
                         </BlurFade>
                       </BlurFade>
                     )}
